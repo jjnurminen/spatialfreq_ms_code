@@ -826,7 +826,7 @@ _montage_pysurfer_brain_plots(
 
 # %% PySurfer plot of focality as function of Lin
 titles = [f'L=1..{k}' for k in range(1, LIN + 1)]
-outfn = f'focality_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
+outfn = projectpath / f'focality_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
 fmin, fmax = 0, 30
 _montage_pysurfer_brain_plots(
     subject,
@@ -865,7 +865,7 @@ titles = [
     f'L=1..{k}, SD={1e3*disp[ind]:.2f} mm'
     for k, disp in zip(range(1, MAX_LIN + 1), sds.values())
 ][:MAX_LIN:N_SKIP]
-outfn = f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}.png'
+outfn = projectpath / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}.png'
 _montage_pysurfer_brain_plots(
     subject,
     subjects_dir,
@@ -884,7 +884,7 @@ _montage_pysurfer_brain_plots(
 
 
 # %% WIP: mlab based plot
-outfn = f'dispersion_mlab.png'
+outfn = projectpath / f'dispersion_mlab.png'
 titles = [f'L=1..{k}' for k in range(1, LIN + 1)]
 foo = _montage_mlab_brain_plots(
     sds.values(),
@@ -1123,7 +1123,7 @@ for L in range(1, LIN_MAX + 1):
     Lstr = str(L).ljust(2)
     titles.append(f'L={Lstr}')
 
-outfn = 'foo.png'
+outfn = projectpath / 'foo.png'
 
 _montage_pysurfer_brain_plots(
     subject,
