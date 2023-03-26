@@ -69,7 +69,7 @@ assert figuredir.is_dir()
 # head position shift to set headpos (independent of source shift)
 HEAD_SHIFT = np.array([0, -0e-2, -0e-2])
 # whether to replace default sensor data (306-ch) with a new geometry
-LOAD_ALTERNATE_ARRAY = False
+LOAD_ALTERNATE_ARRAY = True
 if LOAD_ALTERNATE_ARRAY:
     # choose array
     alt_array_name = Path('OPM_TRIPLESENSORS_306.dat')
@@ -80,7 +80,7 @@ if LOAD_ALTERNATE_ARRAY:
     # alt_array_name = Path('RADIAL_N1000_R20cm.dat')
     # alt_array_name = Path('RADIAL_N1000_R170mm_POINT_MAGNETOMETER.dat')
     # alt_array_name = Path('RADIAL_N1000_R150mm_VV_MAG_T4.dat')
-    # alt_array_name = Path('RADIAL_N1000_R120mm_POINT_MAGNETOMETER.dat')
+    #alt_array_name = Path('RADIAL_N1000_R120mm_POINT_MAGNETOMETER.dat')
     # alt_array_name = Path('RADIAL_N1000_R100mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
     # alt_array_name = Path('RADIAL_N1000_R120mm_coverage3.0pi_POINT_MAGNETOMETER.dat')
     # alt_array_name = Path('OPM_CORTEX1400_POINTLIKE.dat')
@@ -93,7 +93,7 @@ if LOAD_ALTERNATE_ARRAY:
     #alt_array_name = Path(
     #    'RADIAL_N10000_R100mm_coverage4.0pi_6666flipped_POINT_MAGNETOMETER.dat'
     #)
-    #alt_array_name = Path('RADIAL_N1000_R120mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
+    alt_array_name = Path('RADIAL_N1000_R120mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
     # alt_array_name = Path('RADIAL_N5000_R150mm_coverage4.0pi_0flipped_POINT_MAGNETOMETER.dat')
 
 else:
@@ -154,7 +154,7 @@ print('\n')
 if LOAD_ALTERNATE_ARRAY:
     print(f'using saved array: {alt_array_name}')
     array_name = alt_array_name.stem  # name without extension
-    with open(alt_array_name, 'rb') as f:
+    with open(projectpath / alt_array_name, 'rb') as f:
         info = pickle.load(f)
 else:
     array_name = 'VV-306'
@@ -446,7 +446,7 @@ _array_name = str(array_name).lower()
 head_dev_trans = invert_transform(info['dev_head_t'])
 print(f'array: {array_name}')
 if array_name == 'VV-306':
-    LIN, LOUT = 16, 3
+    LIN, LOUT = 8, 3
     # use head model origin
     sss_origin = apply_trans(head_dev_trans, HEAD_ORIGIN)
     # OBS: experiment
@@ -742,7 +742,7 @@ plt.savefig(
 
 # %% mpl plot dispersion as function of source and Lin, median curves
 
-LIN_limit = 18  # highest LIN to plot
+LIN_limit = 8  # highest LIN to plot
 # convert dispersion data to mm
 sds_matrix = 1e3 * np.array(list(v for k, v in sds.items() if k <= LIN_limit))
 LIN_list = list(range(1, LIN_limit + 1))

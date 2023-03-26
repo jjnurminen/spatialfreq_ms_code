@@ -18,7 +18,7 @@ from mne.forward import _create_meg_coils
 import pickle
 from mayavi import mlab
 
-from megsimutils.viz import _mlab_points3d
+from megsimutils.viz import _mlab_points3d, _mlab_quiver3d
 from misc import _spherepts_golden, _random_unit, _normalize_columns
 from megsimutils.envutils import _ipython_setup
 from forward_comp import _sensordata_to_ch_dicts, _sss_basis_nvecs
@@ -40,10 +40,16 @@ raw_file = data_path / 'MEG/sample/sample_audvis_raw.fif'
 info = mne.io.read_info(raw_file)
 info['bads'] = list()  # reset bads since we do not use measured data
 
-NSENSORS = 306
-ARRAY_RADIUS = 0.15  # array radius in m
+NSENSORS = 1000
+ARRAY_RADIUS = 0.12  # array radius in m
 FLIP_SENSORS = 0  # how many sensors to flip (90 deg)
-COVERAGE_ANGLE = 2 * np.pi  # solid angle coverage of the array
+COVERAGE_ANGLE = 4 * np.pi  # solid angle coverage of the array
+COIL_TYPE = FIFF.FIFFV_COIL_POINT_MAGNETOMETER
+# COIL_TYPE = FIFF.FIFFV_COIL_QUSPIN_ZFOPM_MAG2
+# COIL_TYPE = FIFF.FIFFV_COIL_VV_MAG_T4
+# COIL_TYPE = FIFF.FIFFV_COIL_CTF_GRAD
+# COIL_TYPE = FIFF.FIFFV_COIL_BABY_MAG
+
 
 Sc = _spherepts_golden(NSENSORS, angle=COVERAGE_ANGLE)
 Sn = Sc.copy()
@@ -67,13 +73,12 @@ headpos = head_dev_trans['trans'][:3, 3]
 dev_head_trans = invert_transform(head_dev_trans)
 info['dev_head_t'] = dev_head_trans
 
-# if Sn is almost along z-axis, we get numerical issues
-# for such sensors, we put the normal along Z
+# if Sn is "almost" aligned with negative z-axis, we get numerical issues
 almost_negz = np.where(1 - Sn.dot([0, 0, -1]) < 1e-2)[0]
 Sn[almost_negz, :] = np.array([0, 0, -1])
 
 
-# %% check geom
+# %% check array geometry
 fig = mlab.figure()
 _mlab_points3d(Sc, figure=fig, scale_factor=0.001)
 _mlab_quiver3d(Sc, Sn, figure=fig)
@@ -82,12 +87,7 @@ _mlab_quiver3d(Sc, Sn, figure=fig)
 # %% create mne sensor data structures
 info_ = info.copy()  # make sure to get an unaltered copy, in case we run multiple times
 # get coil locations and orientations
-coil_type = FIFF.FIFFV_COIL_QUSPIN_ZFOPM_MAG2
-coil_type = FIFF.FIFFV_COIL_POINT_MAGNETOMETER
-# coil_type = FIFF.FIFFV_COIL_VV_MAG_T4
-# coil_type = FIFF.FIFFV_COIL_CTF_GRAD
-# coil_type = FIFF.FIFFV_COIL_BABY_MAG
-coil_types = NSENSORS * [coil_type]
+coil_types = NSENSORS * [COIL_TYPE]
 # apply no rotations to integration points
 Iprot = np.zeros(NSENSORS)
 sensors_ = list(_sensordata_to_ch_dicts(Sc, Sn, Iprot, coil_types))
@@ -116,16 +116,13 @@ S = _normalize_columns(Su)
 Sin = S[:, :nin]
 Sout = S[:, nin:]
 
-# this can be set to optimize basis by dropping certain basis vectors
-Sin_drop_inds = list()
-
 print('basis dim: Lin=%d Lout=%d' % (LIN, LOUT))
 print('condition for S: %g' % np.linalg.cond(S))
 print('condition for Sin: %g' % np.linalg.cond(Sin))
 
 
-# %% save
-coilname = _coil_name(coil_type)
+# %% save the array data to disk
+coilname = _coil_name(COIL_TYPE)
 fn = f'RADIAL_N{NSENSORS}_R{ARRAY_RADIUS*1e3:.0f}mm_coverage{COVERAGE_ANGLE / np.pi}pi_{FLIP_SENSORS}flipped_{coilname}.dat'
 print('saving %s' % fn)
 with open(
