@@ -60,7 +60,7 @@ from viz import _montage_pysurfer_brain_plots, _montage_mlab_brain_plots
 _ipython_setup(enable_reload=True)
 
 homedir = Path.home()
-projectpath = homedir / 'projects/samu2019'  # where the code resides
+projectpath = homedir / 'projects/spatialfreq_ms_code'  # where the code resides
 assert projectpath.is_dir()
 figuredir = projectpath  # where to put the figures
 assert figuredir.is_dir()
@@ -465,7 +465,7 @@ elif 'opm' in _array_name:  # some other OPM array
     # this is (apparently) due to the reduced solid angle coverage
     sss_origin = np.array([0.005, 0.02, 0.0])  # origin of device coords
 elif 'radial' in _array_name:  # radial-spherical
-    LIN, LOUT = 10, 3
+    LIN, LOUT = 13, 3
     sss_origin = np.array([0.0, -0.0, 0.0])  # origin of device coords
 elif 'barbute' in _array_name:  # barbute helmet
     LIN, LOUT = 20, 3
@@ -806,7 +806,7 @@ src_datas = [
     for val in sds.values()
 ]
 titles = [f'L=1..{k}' for k in range(1, LIN + 1)]
-outfn = f'dispersion_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
+outfn = projectpath / f'dispersion_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
 fmin, fmax = 0, 60
 _montage_pysurfer_brain_plots(
     subject,

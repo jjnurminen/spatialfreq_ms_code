@@ -36,7 +36,7 @@ def _montage_pysurfer_brain_plots(
     frange : tuple of (fmin, fmax), min and max values for scaling the colormap
     src_vertices : indices of source vertices
     hemi : hemisphere to plot ('lh' or 'rh')
-    fn_out : name of .png file to write
+    fn_out : path of .png file to write
     ncols_max : max. n of columns in montaged figure
     """
     FIG_BG_COLOR = (1.0, 1.0, 1.0)
@@ -68,6 +68,9 @@ def _montage_pysurfer_brain_plots(
     mlab.options.offscreen = True
     fignames = list()
     assert len(titles) == nfigs
+
+    # convert possible path objects
+    fn_out = str(fn_out)
 
     for src_data, title, idx in zip(src_datas, titles, range(nfigs)):
         fig = mlab.figure()
