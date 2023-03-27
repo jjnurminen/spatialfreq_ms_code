@@ -48,7 +48,6 @@ from forward_comp import (
     _limit_L,
     _resolution_kernel,
     _spatial_dispersion,
-    _focality,
     _node_to_source_index,
     _hemi_slice,
 )
@@ -97,8 +96,8 @@ HEAD_ORIGIN = np.array((0.0, 0.0, 0.04))
 # which hemisphere and surface to use for visualization
 HEMI = 'lh'
 SURF = 'white'
-# index of nice tangential left hemi source; this depends on source space
-FAV_SOURCE = 1251
+# index of a representative source (tangential on left hemi); this depends on source space
+REPR_SOURCE = 1251
 
 # use 'sample' subject for coreg + mri
 data_path = Path(mne.datasets.sample.data_path())  # path to fiff data
@@ -311,7 +310,7 @@ else:
     src_dij_thishemi = scipy.spatial.distance_matrix(
         node_coords_thishemi_redundant, node_coords_thishemi_redundant
     )
-    # XXX: src_dij_all is missing for free ori
+    # XXX: src_dij_all is not computed for free ori
 
 
 # %% PLOT alignment of sources vs. sensors
@@ -508,7 +507,6 @@ node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1
 # %% compute resolution kernel, spatial dispersion and focality for multipole leadfields
 sds = dict()
 xin_res_kernels = dict()
-focs = dict()
 #
 # FIT_REDUCED_BASES=False: decompose the sensor-based leadfield into the full
 # range of available L components first, then pick the components for each L in
@@ -521,7 +519,7 @@ focs = dict()
 FIT_REDUCED_BASES = True
 RES_METHOD = 'tikhonov'  # how to regularize when computing the resolution kernels
 RES_RCOND = 1e-15  # rcond if regularizing with pinv
-RES_TIKHONOV_LAMBDA = 1e-11  # Tikhonov lambda, if regularizing with Tikhonov
+RES_TIKHONOV_LAMBDA = 1e-8  # Tikhonov lambda, if regularizing with Tikhonov
 xin_lead_conds = list()
 xin_leads = list()
 for L in range(1, LIN + 1):
@@ -539,8 +537,7 @@ for L in range(1, LIN + 1):
     res_kernel = _resolution_kernel(xin_leads_filt, method=RES_METHOD, tikhonov_lambda=RES_TIKHONOV_LAMBDA, rcond=RES_RCOND)
     xin_res_kernels[L] = res_kernel
     sds[L] = _spatial_dispersion(res_kernel, src_dij_all)
-    print(f'{sds[L][FAV_SOURCE]:2f}')
-    focs[L] = _focality(res_kernel)
+    print(f'{sds[L][REPR_SOURCE]:2f}')
 
 # compute resolution kernel, spatial dispersion and focality for sensor-based leadfield
 res_kernel = _resolution_kernel(leads_all_sc, method=RES_METHOD, tikhonov_lambda=RES_TIKHONOV_LAMBDA, rcond=RES_RCOND)
@@ -627,7 +624,7 @@ _montage_pysurfer_brain_plots(
 
 
 # %% MS FIG 1:
-# PySurfer plot of a single source PSF as function of Lin + sensor-based PSF
+# PySurfer plot of a single source PSF as function of Lin, no regularization
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13  # max LIN value to use
@@ -635,7 +632,7 @@ COLOR_THRES = None  # don't show colors below given value
 SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
 # NOTE: source indices are global (index the complete leadfield, not a hemi)
 # ind = 1480  # old one, not very focal
-SRC_IND  = FAV_SOURCE
+SRC_IND  = REPR_SOURCE
 SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
 # frange = 0, .05  # global fixed
 frange = None  # global auto
@@ -685,19 +682,80 @@ _montage_pysurfer_brain_plots(
 )
 
 
+# %% MS FIG 3:
+# PySurfer plot of a single source PSF as function of Lin, no regularization
+N_SKIP = 2  # reduce n of plots by stepping the index
+MIN_LIN = 1
+MAX_LIN = 13  # max LIN value to use
+COLOR_THRES = None  # don't show colors below given value
+SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
+# NOTE: source indices are global (index the complete leadfield, not a hemi)
+# ind = 1480  # old one, not very focal
+SRC_IND  = REPR_SOURCE
+SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
+# frange = 0, .05  # global fixed
+frange = None  # global auto
+frange = 'separate'  # individual auto
+if not FIX_ORI:
+    SRC_IND = SRC_IND[1]  # pick a single orientation
+NCOLS_MAX = 4
+outfn = figuredir / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
+
+titles = list()
+src_datas = list()
+
+# multipole-based data
+for L in range(MIN_LIN, MAX_LIN+1, N_SKIP):
+    # for each L, slice correct row from resolution matrix, restrict to current hemi
+    src_data = np.abs(xin_res_kernels[L][SRC_IND, HEMI_SLICE])
+    src_data = _scalarize_src_data(src_data, nverts_thishemi)
+    src_datas.append(src_data)
+    sd = sds[L][SRC_IND] * 1e3
+    title = f'L=1..{L}, SD={sd:.0f} mm'
+    titles.append(title)
+
+# sensor-based data
+src_data = np.abs(res_kernel[SRC_IND, HEMI_SLICE])
+sd = sds_sensor[SRC_IND] * 1e3
+title = f'sensor, SD={sd:.0f} mm'
+src_datas.append(src_data)
+titles.append(title)
+
+_montage_pysurfer_brain_plots(
+    subject,
+    subjects_dir,
+    src_datas,
+    titles,
+    src_node_inds[HEMI_IND],
+    HEMI,
+    outfn,
+    thresh=COLOR_THRES,
+    smoothing_steps=None,
+    surf=SURF,
+    frange=frange,
+    ncols_max=NCOLS_MAX,
+    colormap='plasma',
+    colorbar_nlabels=4,
+    title_width=0.7,
+    do_colorbar=False,
+)
+
+
+
+
 # %% MS PLOT: PySurfer plot of a single source sensor-based PSF
 
 COLOR_THRES = None  # don't show colors below given value
 SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
 # NOTE: source indices are global (index the complete leadfield, not a hemi)
 # ind = 1480  # old one, not very focal
-SRC_IND  = FAV_SOURCE
+SRC_IND  = REPR_SOURCE
 SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
 frange = 'separate'  # use either 'separate' (individual auto) or a tuple
 frange = None
 THRESH = None
 DO_COLORBAR = False
-DO_TITLE = False
+DO_TITLE = True
 SMOOTHING_STEPS = None
 FIGSIZE = (400, 300)  # size of a single figure (pixels)
 COLORMAP = 'plasma'
@@ -764,7 +822,7 @@ PINV_RCOND = 1e-12
 FIG_BG_COLOR = (0.3, 0.3, 0.3)
 FIGSIZE = (400, 300)
 NCOLS_MAX = 5
-SRC_IND = FAV_SOURCE
+SRC_IND = REPR_SOURCE
 THRESH = None  # whether to threshold plot
 SURF = 'inflated'
 DO_COLORBAR = False
@@ -839,7 +897,7 @@ PINV_RCOND = 1e-12
 FIG_BG_COLOR = (0.3, 0.3, 0.3)
 FIGSIZE = (400, 300)
 NCOLS_MAX = 5
-SRC_IND = FAV_SOURCE
+SRC_IND = REPR_SOURCE
 THRESH = None  # whether to threshold plot
 SURF = 'inflated'
 LMAX = 9
@@ -928,7 +986,7 @@ plt.semilogy((np.linalg.pinv(Sin_red) @ src_lead_sensors) / (np.linalg.pinv(Sin_
 
 # %% single PySurfer plot for experiments
 
-SRC_IND = FAV_SOURCE
+SRC_IND = REPR_SOURCE
 src_data = res_kernel[SRC_IND, :]
 # src_data = xin_res_kernels[18][src_ind, :]
 src_data = np.abs(src_data)[HEMI_SLICE]
@@ -1017,7 +1075,7 @@ LIN_VALS = [6, 7, 8, 9]
 NCOLS_MAX = len(LIN_VALS)
 frange = 'separate'  # individual auto
 #frange = None
-SRC_IND = FAV_SOURCE
+SRC_IND = REPR_SOURCE
 DO_COLORBAR = False
 
 inverses = list()
