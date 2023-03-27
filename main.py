@@ -780,6 +780,8 @@ _montage_pysurfer_brain_plots(
 # %% MS FIG 5:
 # plot lead field SVD vectors on array trimesh
 
+outfn = figuredir / 'svd_basis_trimesh.png'
+
 U, Sigma, V = np.linalg.svd(leads_all_sc)
 
 inds, locs, tri = _make_array_tri(info)
@@ -791,12 +793,14 @@ for k in range(20):
     title = f'k={k+1}'.ljust(6)
     titles.append(title)
 _montage_mlab_trimesh(
-    locs, tri, src_datas, titles, 'svd_basis_trimesh.png', ncols_max=5, distance=0.5
+    locs, tri, src_datas, titles, figuredir, ncols_max=5, distance=0.5
 )
 
 
 # %% MS FIG 6:
 # plot some VSHs on array trimesh
+
+outfn = figuredir / 'vsh_basis_trimesh.png'
 
 inds, locs, tri = _make_array_tri(info)
 
@@ -809,13 +813,15 @@ for ind in range(20):
     title = f'({L}, {m})'
     titles.append(title)
 _montage_mlab_trimesh(
-    locs, tri, src_datas, titles, 'vsh_basis_trimesh.png', ncols_max=5, distance=0.5
+    locs, tri, src_datas, titles, outfn, ncols_max=5, distance=0.5
 )
 
 
 # %% MS FIG 7:
 # L-dependent MNP solution with noise.
 # Pick a single source from the leadfield matrix, add noise and do MNP in the multipole domain.
+
+outfn = figuredir / 'inverse_vs_SNR.png'
 
 REGU_METHOD = 'tikhonov'
 # in literature, values of ~1e-5 to ~1e-11 have been considered; 1e-8 is reasonable
@@ -869,8 +875,6 @@ for SNR in SNR_VALS:
         inverses.append(inv_sol)
         # Lstr = str(L).ljust(2)
         titles.append(f'{L=}, {SNR=}')
-
-outfn = 'foo.png'
 
 _montage_pysurfer_brain_plots(
     subject,
