@@ -89,19 +89,19 @@ def _rot_around_axis_mat(a, theta):
     return np.array(
         [
             [
-                ctheta + (1 - ctheta) * x ** 2,
+                ctheta + (1 - ctheta) * x**2,
                 (1 - ctheta) * x * y - stheta * z,
                 (1 - ctheta) * x * z + stheta * y,
             ],
             [
                 (1 - ctheta) * y * x + stheta * z,
-                ctheta + (1 - ctheta) * y ** 2,
+                ctheta + (1 - ctheta) * y**2,
                 (1 - ctheta) * y * z - stheta * x,
             ],
             [
                 (1 - ctheta) * z * x - stheta * y,
                 (1 - ctheta) * z * y + stheta * x,
-                ctheta + (1 - ctheta) * z ** 2,
+                ctheta + (1 - ctheta) * z**2,
             ],
         ]
     )
@@ -122,7 +122,7 @@ def _spherepts_golden(N, angle=4 * np.pi):
     ----------
     n : int
         Number of points.
-        
+
     angle : float
         Solid angle (symmetrical around z axis) covered by the points. By
         default, the whole sphere. Must be between 0 and 4*pi
@@ -141,7 +141,7 @@ def _spherepts_golden(N, angle=4 * np.pi):
     dz = (z_top - z_bottom) / N
 
     z = np.linspace(z_top - dz / 2, z_bottom + dz / 2, N)
-    r = np.sqrt(1 - z ** 2)
+    r = np.sqrt(1 - z**2)
     # this looks like the usual cylindrical -> Cartesian transform?
     return np.column_stack((r * np.cos(longs), r * np.sin(longs), z))
 
@@ -156,4 +156,3 @@ def _unit_impulse(N, n):
 def _moore_penrose_pseudoinverse(L):
     """Naive Moore-Penrose pseudoinverse (without regularization)"""
     return L.T @ np.linalg.inv(L @ L.T)
-

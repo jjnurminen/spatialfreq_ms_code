@@ -284,11 +284,15 @@ else:
     test_sources = dict()
     # generic (1,1,1) vector for all sources
     for key in test_nodes:
-        SRC_IND = 3 * test_nodes[key]  # since we have 3 orientation elements for each node
+        SRC_IND = (
+            3 * test_nodes[key]
+        )  # since we have 3 orientation elements for each node
         srcvec = np.zeros(nsrc_valid_thishemi)
         # set some specific orientations
         if key == 'superficial_z':
-            srcvec[SRC_IND : SRC_IND + 3] = np.array([-0.14288205, -0.8898686, 0.43326493])
+            srcvec[SRC_IND : SRC_IND + 3] = np.array(
+                [-0.14288205, -0.8898686, 0.43326493]
+            )
         else:
             srcvec[SRC_IND : SRC_IND + 3] = 1
         test_sources[key] = srcvec
@@ -298,9 +302,7 @@ if FIX_ORI:
     src_dij_thishemi = scipy.spatial.distance_matrix(
         node_coords_thishemi, node_coords_thishemi
     )
-    src_dij_all = scipy.spatial.distance_matrix(
-        node_coords_all, node_coords_all
-    )
+    src_dij_all = scipy.spatial.distance_matrix(node_coords_all, node_coords_all)
 else:
     node_coords_thishemi_redundant = np.empty((nsrc_valid_thishemi, 3))
     node_coords_thishemi_redundant[0::3, :] = node_coords_thishemi
@@ -346,15 +348,12 @@ pts.glyph.scale_mode = 'scale_by_vector'
 pts.mlab_source.dataset.point_data.scalars = colors
 
 
-
 # %% FIND superficial nodes by using the cortical mesh
 # XXX: this is still hemi-specific, i.e. resulting indices will be into the
 # nodes of the chosen hemi instead of the full source space
 
 INITIAL_VERTEX_SPACING = 1e-3
-ZLIM = (
-    0.05  # pick sources higher than this (m) in z dir to exclude sources at bottom of the brain
-)
+ZLIM = 0.05  # pick sources higher than this (m) in z dir to exclude sources at bottom of the brain
 DIST_LIMIT = 0.02  # (m) pick sources that are closer than this to cortical mesh
 
 # create a cortical surface mesh
@@ -412,7 +411,7 @@ superf_node_normals = src_normals_thishemi[superf_node_inds, :]
 fig = mlab.figure()
 _mlab_trimesh(pts_, tris_, figure=fig, transparent=True)
 _mlab_points3d(superf_node_coords, figure=fig, scale_factor=2e-3)
-_mlab_quiver3d(superf_node_coords, superf_node_normals, figure=fig, scale_factor=.005)
+_mlab_quiver3d(superf_node_coords, superf_node_normals, figure=fig, scale_factor=0.005)
 
 
 # %% visualize source loc and ori
@@ -422,7 +421,13 @@ fig = mlab.figure()
 SURF = 'white'
 
 brain = Brain(
-    subject, HEMI, SURF, subjects_dir=subjects_dir, background='white', alpha=1, figure=fig
+    subject,
+    HEMI,
+    SURF,
+    subjects_dir=subjects_dir,
+    background='white',
+    alpha=1,
+    figure=fig,
 )
 colorbar = True
 
@@ -444,7 +449,13 @@ src_loc = node_coords_thishemi[None, SRC_IND, :]  # head coords
 src_loc_mri = apply_trans(head_mri_trans, src_loc) * 1e3
 src_normal = src_normals_thishemi[None, SRC_IND, :]
 _mlab_quiver3d(
-   src_loc_mri, src_normal, figure=fig, scale_factor=10, color=(1.0, 0., 0.), line_width=.1, mode='arrow',
+    src_loc_mri,
+    src_normal,
+    figure=fig,
+    scale_factor=10,
+    color=(1.0, 0.0, 0.0),
+    line_width=0.1,
+    mode='arrow',
 )
 
 
@@ -502,7 +513,6 @@ node_coords_thishemi_dev = apply_trans(head_dev_trans, node_coords_thishemi)
 node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1)
 
 
-
 # %% compute resolution kernel, spatial dispersion and focality for multipole leadfields
 sds = dict()
 xin_res_kernels = dict()
@@ -514,7 +524,7 @@ xin_res_kernels = dict()
 # decomposition may require regularization.
 #
 # FIT_REDUCED_BASES=True: fit leadfield onto the reduced-order basis at each L.
-#  
+#
 FIT_REDUCED_BASES = True
 RES_METHOD = 'tikhonov'  # how to regularize when computing the resolution kernels
 RES_RCOND = 1e-15  # rcond if regularizing with pinv
@@ -533,20 +543,32 @@ for L in range(1, LIN + 1):
     xin_leads.append(xin_leads_filt)
     xin_lead_conds.append(np.linalg.cond(xin_leads_filt))
     print(f'{L=}, leadfield condition: {np.linalg.cond(xin_leads_filt):g}')
-    res_kernel = _resolution_kernel(xin_leads_filt, method=RES_METHOD, tikhonov_lambda=RES_TIKHONOV_LAMBDA, rcond=RES_RCOND)
+    res_kernel = _resolution_kernel(
+        xin_leads_filt,
+        method=RES_METHOD,
+        tikhonov_lambda=RES_TIKHONOV_LAMBDA,
+        rcond=RES_RCOND,
+    )
     xin_res_kernels[L] = res_kernel
     sds[L] = _spatial_dispersion(res_kernel, src_dij_all)
     print(f'{sds[L][REPR_SOURCE]:2f}')
 
 # compute resolution kernel, spatial dispersion and focality for sensor-based leadfield
-res_kernel = _resolution_kernel(leads_all_sc, method=RES_METHOD, tikhonov_lambda=RES_TIKHONOV_LAMBDA, rcond=RES_RCOND)
+res_kernel = _resolution_kernel(
+    leads_all_sc,
+    method=RES_METHOD,
+    tikhonov_lambda=RES_TIKHONOV_LAMBDA,
+    rcond=RES_RCOND,
+)
 sds_sensor = _spatial_dispersion(res_kernel, src_dij_all)
 
 # spatial dispersion vs. lambda when using Tikhonov regularization for the resolution kernels
 sds_lambda = dict()
-lambdas = 10.**np.arange(-5, -12, -1)
+lambdas = 10.0 ** np.arange(-5, -12, -1)
 for _lambda in lambdas:
-    res_kernel = _resolution_kernel(leads_all_sc, method='tikhonov', tikhonov_lambda=_lambda)
+    res_kernel = _resolution_kernel(
+        leads_all_sc, method='tikhonov', tikhonov_lambda=_lambda
+    )
     sds_lambda[_lambda] = _spatial_dispersion(res_kernel, src_dij_all)
 
 
@@ -558,18 +580,24 @@ REDUCER_FUN = np.mean
 YLABEL = 'Mean PSF spatial dispersion (mm)'
 YTICKS = list(range(20, 90, 10))
 fig, (ax1, ax2) = plt.subplots(2, 1)
-ax1.semilogx(lambdas, [1e3*REDUCER_FUN(sds_lambda[l][:]) for l in lambdas], label='sensor-based')
+ax1.semilogx(
+    lambdas,
+    [1e3 * REDUCER_FUN(sds_lambda[l][:]) for l in lambdas],
+    label='sensor-based',
+)
 ax1.set_xlabel('$\lambda$ (sensor-based inverse)')
 fig.supylabel(YLABEL)
-#ax1.set_ylim((25, 80))
+# ax1.set_ylim((25, 80))
 ax1.set_yticks(YTICKS)
 ax1.invert_xaxis()
-#plt.savefig('mean_PSF_SD_vs_lambda.png')
+# plt.savefig('mean_PSF_SD_vs_lambda.png')
 ax2.set_xticks(Lvals)
 ax2.set_xlabel('$L$ (multipole-based inverse)')
-ax2.plot(Lvals, [1e3*REDUCER_FUN(sds[L][:]) for L in Lvals], 'r', label='multipole-based')
-#ax2.set_ylabel(YLABEL)
-#ax2.set_ylim((25, 80))
+ax2.plot(
+    Lvals, [1e3 * REDUCER_FUN(sds[L][:]) for L in Lvals], 'r', label='multipole-based'
+)
+# ax2.set_ylabel(YLABEL)
+# ax2.set_ylim((25, 80))
 ax2.set_yticks(YTICKS)
 plt.tight_layout()
 plt.savefig(outfn)
@@ -588,7 +616,7 @@ titles = list()
 src_datas = list()
 
 # multipole-based data
-for L in range(MIN_LIN, MAX_LIN+1, N_SKIP):
+for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
     src_data = sds[L][HEMI_SLICE]
     # scalarize and convert m->mm
     src_data = 1e3 * _scalarize_src_data(src_data, nverts_thishemi, reducer_fun=np.mean)
@@ -631,7 +659,7 @@ COLOR_THRES = None  # don't show colors below given value
 SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
 # NOTE: source indices are global (index the complete leadfield, not a hemi)
 # ind = 1480  # old one, not very focal
-SRC_IND  = REPR_SOURCE
+SRC_IND = REPR_SOURCE
 SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
 # frange = 0, .05  # global fixed
 frange = None  # global auto
@@ -639,13 +667,16 @@ frange = 'separate'  # individual auto
 if not FIX_ORI:
     SRC_IND = SRC_IND[1]  # pick a single orientation
 NCOLS_MAX = 4
-outfn = figuredir / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
+outfn = (
+    figuredir
+    / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
+)
 
 titles = list()
 src_datas = list()
 
 # multipole-based data
-for L in range(MIN_LIN, MAX_LIN+1, N_SKIP):
+for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
     # for each L, slice correct row from resolution matrix, restrict to current hemi
     src_data = np.abs(xin_res_kernels[L][SRC_IND, HEMI_SLICE])
     src_data = _scalarize_src_data(src_data, nverts_thishemi)
@@ -692,7 +723,7 @@ COLOR_THRES = None  # don't show colors below given value
 SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
 # NOTE: source indices are global (index the complete leadfield, not a hemi)
 # ind = 1480  # old one, not very focal
-SRC_IND  = REPR_SOURCE
+SRC_IND = REPR_SOURCE
 SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
 # frange = 0, .05  # global fixed
 frange = None  # global auto
@@ -700,13 +731,16 @@ frange = 'separate'  # individual auto
 if not FIX_ORI:
     SRC_IND = SRC_IND[1]  # pick a single orientation
 NCOLS_MAX = 4
-outfn = figuredir / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
+outfn = (
+    figuredir
+    / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
+)
 
 titles = list()
 src_datas = list()
 
 # multipole-based data
-for L in range(MIN_LIN, MAX_LIN+1, N_SKIP):
+for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
     # for each L, slice correct row from resolution matrix, restrict to current hemi
     src_data = np.abs(xin_res_kernels[L][SRC_IND, HEMI_SLICE])
     src_data = _scalarize_src_data(src_data, nverts_thishemi)
@@ -755,7 +789,9 @@ for k in range(20):
     src_datas.append(U[:, k])
     title = f'k={k+1}'.ljust(6)
     titles.append(title)
-_montage_mlab_trimesh(locs, tri, src_datas, titles, 'svd_basis_trimesh.png', ncols_max=5, distance=.5)
+_montage_mlab_trimesh(
+    locs, tri, src_datas, titles, 'svd_basis_trimesh.png', ncols_max=5, distance=0.5
+)
 
 
 # %% MS FIG 6:
@@ -768,12 +804,12 @@ titles = list()
 for ind in range(20):
     src_datas.append(Sin[:, ind])
     L, m = _idx_deg_ord(ind)
-    #title = f'{L=}, {m=}'
+    # title = f'{L=}, {m=}'
     title = f'({L}, {m})'
     titles.append(title)
-_montage_mlab_trimesh(locs, tri, src_datas, titles, 'vsh_basis_trimesh.png', ncols_max=5, distance=.5)
-
-
+_montage_mlab_trimesh(
+    locs, tri, src_datas, titles, 'vsh_basis_trimesh.png', ncols_max=5, distance=0.5
+)
 
 
 # %% MS FIG 7:
@@ -792,7 +828,7 @@ SNR_VALS = [1, 2, 5, 10]
 LIN_VALS = [6, 7, 8, 9]
 NCOLS_MAX = len(LIN_VALS)
 frange = 'separate'  # individual auto
-#frange = None
+# frange = None
 SRC_IND = REPR_SOURCE
 DO_COLORBAR = False
 
@@ -803,7 +839,7 @@ for SNR in SNR_VALS:
     np.random.seed(10)
     src_lead_sensors = leads_thishemi_sc[:, SRC_IND]
     noisevec = np.random.randn(*src_lead_sensors.shape)
-    noisevec /= (np.linalg.norm(noisevec) * SNR)
+    noisevec /= np.linalg.norm(noisevec) * SNR
     noisevec *= np.linalg.norm(src_lead_sensors)
     src_lead_sensors_noisy = src_lead_sensors + noisevec
 
@@ -830,7 +866,7 @@ for SNR in SNR_VALS:
         inv_sol = inv_sol_full[HEMI_SLICE]
         inv_sol = _scalarize_src_data(inv_sol, nverts_thishemi)
         inverses.append(inv_sol)
-        #Lstr = str(L).ljust(2)
+        # Lstr = str(L).ljust(2)
         titles.append(f'{L=}, {SNR=}')
 
 outfn = 'foo.png'

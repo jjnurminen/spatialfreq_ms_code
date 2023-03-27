@@ -13,7 +13,6 @@ from megsimutils.fileutils import _named_tempfile, _montage_figs
 from megsimutils.viz import _mlab_points3d, _mlab_trimesh
 
 
-
 def _montage_pysurfer_brain_plots(
     subject,
     subjects_dir,
@@ -67,7 +66,7 @@ def _montage_pysurfer_brain_plots(
     if colorbar_nlabels is None:
         colorbar_nlabels = 6  # default is too many
     if title_width is None:
-        title_width = .5
+        title_width = 0.5
 
     colorbar_fontsize = int(FIGSIZE[0] / 16)  # heuristic
 
@@ -81,7 +80,7 @@ def _montage_pysurfer_brain_plots(
         pass
     else:
         fmin, fmax = frange
-      
+
     mlab.options.offscreen = True
     fignames = list()
     assert len(titles) == nfigs
@@ -98,7 +97,9 @@ def _montage_pysurfer_brain_plots(
             figure=fig,
         )
         brains.append(brain)
-        plot_colorbar = do_colorbar and idx == nfigs - 1  # only add colorbar to last figure
+        plot_colorbar = (
+            do_colorbar and idx == nfigs - 1
+        )  # only add colorbar to last figure
         brain.add_data(
             src_data,
             vertices=src_vertices,
@@ -121,7 +122,7 @@ def _montage_pysurfer_brain_plots(
             brain.scale_data_colormap(
                 fmin=fmin, fmid=fmid, fmax=fmax, transparent=False, verbose=False
             )
-        mlab.text(.1, .8, title, width=title_width)
+        mlab.text(0.1, 0.8, title, width=title_width)
 
         # temporarily save fig for the montage
         fname = _named_tempfile(suffix='.png')
@@ -229,19 +230,20 @@ def _montage_mlab_brain_plots(
     return src_datas_scaled
 
 
-
-def _montage_mlab_trimesh(locs, tri, src_datas, titles, fn_out, ncols_max=None, distance=None):
+def _montage_mlab_trimesh(
+    locs, tri, src_datas, titles, fn_out, ncols_max=None, distance=None
+):
     """Montage trimesh plots"""
 
-    #FIG_BG_COLOR = (0.3, 0.3, 0.3)
-    FIG_BG_COLOR = (1., 1., 1.)
+    # FIG_BG_COLOR = (0.3, 0.3, 0.3)
+    FIG_BG_COLOR = (1.0, 1.0, 1.0)
     FIGSIZE = (400, 300)
 
     if ncols_max is None:
         ncols_max = 4
 
     if distance is None:
-        distance = .6  # view distance
+        distance = 0.6  # view distance
 
     nfigs = len(src_datas)
 
@@ -252,8 +254,8 @@ def _montage_mlab_trimesh(locs, tri, src_datas, titles, fn_out, ncols_max=None, 
         fig = mlab.figure(bgcolor=FIG_BG_COLOR)
         _mlab_trimesh(locs, tri, scalars=src_data, figure=fig)
         mlab.view(distance=distance)
-        #mlab.title(title, color=(0., 0., 0.))
-        mlab.text(0, .8, title, width=.2, color=(0., 0., 0.))
+        # mlab.title(title, color=(0., 0., 0.))
+        mlab.text(0, 0.8, title, width=0.2, color=(0.0, 0.0, 0.0))
         # save fig for the montage
         fname = _named_tempfile(suffix='.png')
         print(f'creating figure {idx}/{nfigs}')
@@ -274,7 +276,6 @@ def _montage_mlab_trimesh(locs, tri, src_datas, titles, fn_out, ncols_max=None, 
 
     mlab.options.offscreen = False  # restore
     _montage_figs(fignames, fn_out, ncols_max=ncols_max)
-
 
 
 def _rescale_brain_colormap(
