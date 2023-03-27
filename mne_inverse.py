@@ -45,7 +45,6 @@ from forward_comp import (
     _idx_deg_ord,
     _min_norm_pinv,
     _scalarize_src_data,
-    _limit_L,
     _resolution_kernel,
     _spatial_dispersion,
     _node_to_source_index,

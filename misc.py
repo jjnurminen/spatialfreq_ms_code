@@ -6,15 +6,7 @@ Common funcs
 @author: jussi
 """
 
-from pathlib import Path
 import numpy as np
-import subprocess
-import platform
-import mne
-import os
-import tempfile
-from mne.io.constants import FIFF
-from mne.transforms import rotation3d_align_z_axis
 from scipy.linalg import subspace_angles
 
 
@@ -162,6 +154,6 @@ def _unit_impulse(N, n):
 
 
 def _moore_penrose_pseudoinverse(L):
-    """This is the naive Moore-Penrose pseudoinverse (without regularization)"""
+    """Naive Moore-Penrose pseudoinverse (without regularization)"""
     return L.T @ np.linalg.inv(L @ L.T)
 

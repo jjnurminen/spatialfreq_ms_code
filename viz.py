@@ -10,7 +10,7 @@ import numpy as np
 from mayavi import mlab
 from surfer import Brain
 from megsimutils.fileutils import _named_tempfile, _montage_figs
-from megsimutils.viz import _mlab_points3d, _mlab_quiver3d, _mlab_trimesh
+from megsimutils.viz import _mlab_points3d, _mlab_trimesh
 
 
 

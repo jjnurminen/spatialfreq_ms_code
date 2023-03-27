@@ -9,14 +9,13 @@ Field computation & sensor related stuff
 import numpy as np
 import mne
 from mne.io.constants import FIFF
-from mne.transforms import rotation3d_align_z_axis, rotation3d, _deg_ord_idx
+from mne.transforms import rotation3d_align_z_axis, _deg_ord_idx
 from mne.preprocessing.maxwell import _sss_basis
 import scipy
-from scipy.linalg import subspace_angles
 import copy
 from functools import reduce
 
-from misc import _rotate_to, _rot_around_axis_mat
+from misc import _rot_around_axis_mat
 
 
 def _info_meg_locs(info):
