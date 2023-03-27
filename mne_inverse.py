@@ -683,7 +683,9 @@ _montage_pysurfer_brain_plots(
 
 
 # %% MS FIG 3:
-# PySurfer plot of a single source PSF as function of Lin, no regularization
+# PySurfer plot of a single source PSF as function of Lin, regularization with lambda = 1e-8
+# WIP: check that sensor-based result is correct!
+#
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13  # max LIN value to use
@@ -741,326 +743,43 @@ _montage_pysurfer_brain_plots(
 )
 
 
+# %% MS FIG 5:
+# plot lead field SVD vectors on array trimesh
+
+U, Sigma, V = np.linalg.svd(leads_all_sc)
+
+inds, locs, tri = _make_array_tri(info)
+
+src_datas = list()
+titles = list()
+for k in range(20):
+    src_datas.append(U[:, k])
+    title = f'k={k+1}'.ljust(6)
+    titles.append(title)
+_montage_mlab_trimesh(locs, tri, src_datas, titles, 'svd_basis_trimesh.png', ncols_max=5, distance=.5)
 
 
-# %% MS PLOT: PySurfer plot of a single source sensor-based PSF
+# %% MS FIG 6:
+# plot some VSHs on array trimesh
 
-COLOR_THRES = None  # don't show colors below given value
-SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
-# NOTE: source indices are global (index the complete leadfield, not a hemi)
-# ind = 1480  # old one, not very focal
-SRC_IND  = REPR_SOURCE
-SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
-frange = 'separate'  # use either 'separate' (individual auto) or a tuple
-frange = None
-THRESH = None
-DO_COLORBAR = False
-DO_TITLE = True
-SMOOTHING_STEPS = None
-FIGSIZE = (400, 300)  # size of a single figure (pixels)
-COLORMAP = 'plasma'
-colorbar_nlabels = 5  # default is too many
-title_width = .5
-colorbar_fontsize = int(FIGSIZE[0] / 16)  # heuristic
+inds, locs, tri = _make_array_tri(info)
 
-if not FIX_ORI:
-    SRC_IND = SRC_IND[1]  # pick a single orientation
-
-src_data = np.abs(res_kernel[SRC_IND, HEMI_SLICE])
-sd = sds_sensor[SRC_IND] * 1e3
-title = f'SD={sd:.2f} mm'
-
-if frange is None:
-    frange = (0, max(src_data))
-
-fig = mlab.figure()
-brain = Brain(
-    subject,
-    HEMI,
-    SURF,
-    subjects_dir=subjects_dir,
-    background='white',
-    figure=fig,
-)
-brain.add_data(
-    src_data,
-    vertices=src_node_inds[HEMI_IND],
-    colormap=COLORMAP,
-    hemi=HEMI,
-    thresh=THRESH,
-    colorbar=DO_COLORBAR,
-    smoothing_steps=SMOOTHING_STEPS,
-)
-if DO_COLORBAR:
-    # we need to dive deep into the brain to get a handle on the colorbar
-    cb = brain._data_dicts[HEMI][0]['colorbars'][0]
-    cb.label_text_property.bold = 0
-    cb.scalar_bar.unconstrained_font_size = True
-    cb.scalar_bar.number_of_labels = colorbar_nlabels
-    cb.label_text_property.font_size = colorbar_fontsize
-
-if isinstance(frange, tuple):
-    fmin, fmax = frange
-if frange != 'separate':
-    fmid = (fmin + fmax) / 2
-    brain.scale_data_colormap(
-        fmin=fmin, fmid=fmid, fmax=fmax, transparent=False, verbose=False
-    )
-if DO_TITLE:
-    mlab.text(.1, .8, title, width=title_width)
-
-outfn = f'psf_sensor_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_surf_{SURF}.png'
-mlab.savefig(outfn)
-
-
-
-# %% MS plot: sensor-space leadfield inversion, noisy version
-SNR = 5  # specify SNR or use None for no additive noise
-REGU_METHOD = 'tikhonov'
-LAMBDA = 1e-20  # in literature, values of ~1e-5 to ~1e-11 have been used
-PINV_RCOND = 1e-12
-FIG_BG_COLOR = (0.3, 0.3, 0.3)
-FIGSIZE = (400, 300)
-NCOLS_MAX = 5
-SRC_IND = REPR_SOURCE
-THRESH = None  # whether to threshold plot
-SURF = 'inflated'
-DO_COLORBAR = False
-DO_TITLE = True
-
-# pick source forward from leadfield
-src_lead_sensors = leads_thishemi_sc[:, SRC_IND]
-
-# add noise
-# NB: this may disproportionely affect the other type of sensor (mags/grads)
-if SNR is not None:
-    noisevec = np.random.randn(*src_lead_sensors.shape)
-    snr_scaler = np.linalg.norm(noisevec) / np.linalg.norm(src_lead_sensors) * SNR
-    noisevec /= snr_scaler
-    snr_true = np.linalg.norm(src_lead_sensors) / np.linalg.norm(noisevec)
-    print(f'{snr_true=}')
-    src_lead_sensors_noisy = src_lead_sensors + noisevec
-else:
-    src_lead_sensors_noisy = src_lead_sensors
-
-inv_sol_full = _min_norm_pinv(
-    leads_all_sc,
-    src_lead_sensors_noisy,
-    method=REGU_METHOD,
-    tikhonov_lambda=LAMBDA,
-    rcond=PINV_RCOND,
-)
-inv_sol = inv_sol_full[HEMI_SLICE]
-
-# compute the spatial dispersion in mm
-sd = np.sqrt(
-    np.sum(src_dij_thishemi[SRC_IND, :] ** 2 * inv_sol ** 2) / np.sum(inv_sol ** 2)
-) * 1e3
-
-SURF = 'inflated'  # XXX
-fig = mlab.figure()
-brain = Brain(
-    subject,
-    HEMI,
-    SURF,
-    subjects_dir=subjects_dir,
-    background='white',
-    figure=fig,
-)
-brain.add_data(
-    inv_sol,
-    vertices=src_node_inds[HEMI_IND],
-    colormap='plasma',
-    hemi=HEMI,
-    colorbar=DO_COLORBAR,
-    thresh=THRESH,
-    smoothing_steps=None,
-)
-frange = (0, max(inv_sol))
-if frange is not None:
-    fmin, fmax = frange
-    fmid = (fmin + fmax) / 2
-    brain.scale_data_colormap(
-        fmin=fmin, fmid=fmid, fmax=fmax, transparent=False, verbose=False
-    )
-
-if DO_TITLE:
-    mlab.title(f'SD={sd:.2f} mm')
-mlab.savefig(f'sensor_leadfield_inverse_{array_name}_SNR{SNR}_LAMBDA{LAMBDA}.png')
-
-
-# %% MS plot: multipole leadfield inversion, noisy version
-SNR = 5  # specify SNR or use None for no additive noise
-REGU_METHOD = 'unreg'
-LAMBDA = 1e-20  # in literature, values of ~1e-5 to ~1e-11 have been used
-PINV_RCOND = 1e-12
-FIG_BG_COLOR = (0.3, 0.3, 0.3)
-FIGSIZE = (400, 300)
-NCOLS_MAX = 5
-SRC_IND = REPR_SOURCE
-THRESH = None  # whether to threshold plot
-SURF = 'inflated'
-LMAX = 9
-
-# pick source forward from leadfield
-src_lead_sensors = leads_thishemi_sc[:, SRC_IND]
-
-# add noise
-# NB: this may disproportionely affect the other type of sensor (mags/grads)
-if SNR is not None:
-    np.random.seed(0)
-    noisevec = np.random.randn(*src_lead_sensors.shape)
-    snr_scaler = np.linalg.norm(noisevec) / np.linalg.norm(src_lead_sensors) * SNR
-    noisevec /= snr_scaler
-    snr_true = np.linalg.norm(src_lead_sensors) / np.linalg.norm(noisevec)
-    print(f'{snr_true=}')
-    src_lead_sensors_noisy = src_lead_sensors + noisevec
-else:
-    src_lead_sensors_noisy = src_lead_sensors
-
-theLs = list(range(1, LMAX + 1))
-include = np.where(np.isin(basisvec_L, theLs))[0]
-Sin_red = Sin[:, include]
-# L-limited multipole transformation of leadfield
-xin_leads_red = np.squeeze(np.linalg.pinv(Sin_red) @ leads_all_sc)
-# multipole components for noisy forward field
-lead_cond = np.linalg.cond(xin_leads_red)
-print(f'{LMAX=} condition leadfield: {lead_cond:.2e}')
-xin_source_red = np.squeeze(np.linalg.pinv(Sin_red) @ src_lead_sensors_noisy)
-
-inv_sol_full = _min_norm_pinv(
-    xin_leads_red,
-    xin_source_red,
-    method=REGU_METHOD,
-    tikhonov_lambda=LAMBDA,
-    rcond=PINV_RCOND,
-)
-inv_sol = inv_sol_full[HEMI_SLICE]
-
-# compute the spatial dispersion in mm
-sd = np.sqrt(
-    np.sum(src_dij_thishemi[SRC_IND, :] ** 2 * inv_sol ** 2) / np.sum(inv_sol ** 2)
-) * 1e3
-
-SURF = 'inflated'  # XXX
-fig = mlab.figure()
-brain = Brain(
-    subject,
-    HEMI,
-    SURF,
-    subjects_dir=subjects_dir,
-    background='white',
-    figure=fig,
-)
-brain.add_data(
-    inv_sol,
-    vertices=src_node_inds[HEMI_IND],
-    colormap='plasma',
-    hemi=HEMI,
-    colorbar=True,
-    thresh=THRESH,
-    smoothing_steps=None,
-)
-frange = (0, max(inv_sol))
-if frange is not None:
-    fmin, fmax = frange
-    fmid = (fmin + fmax) / 2
-    brain.scale_data_colormap(
-        fmin=fmin, fmid=fmid, fmax=fmax, transparent=False, verbose=False
-    )
-
-mlab.title(f'SD={sd:.2f} mm')
-#mlab.title(f'{array_name} ({SNR=}, {LAMBDA=})')
-mlab.savefig(f'tikhonov_inversion_{array_name}_SNR{SNR}_LAMBDA{LAMBDA}.png')
-
-
-
-# %%
-plt.figure()
-plt.semilogy(np.linalg.pinv(Sin_red) @ src_lead_sensors)
-plt.semilogy(np.linalg.pinv(Sin_red) @ noisevec)
-
-plt.figure()
-plt.semilogy((np.linalg.pinv(Sin_red) @ src_lead_sensors) / (np.linalg.pinv(Sin_red) @ noisevec))
-
-
-# %% single PySurfer plot for experiments
-
-SRC_IND = REPR_SOURCE
-src_data = res_kernel[SRC_IND, :]
-# src_data = xin_res_kernels[18][src_ind, :]
-src_data = np.abs(src_data)[HEMI_SLICE]
-
-fig = mlab.figure()
-brain = Brain(
-    subject,
-    HEMI,
-    SURF,
-    subjects_dir=subjects_dir,
-    background='white',
-    figure=fig,
-)
-brain.add_data(
-    src_data,
-    vertices=src_node_inds[HEMI_IND],
-    colormap='plasma',
-    hemi=HEMI,
-    colorbar=True,
-    smoothing_steps=None,
-)
-# cb = brain._data_dicts[HEMI][0]['colorbars'][0]
-# cb.label_text_property.bold = 0
-# cb.scalar_bar.unconstrained_font_size = True
-# cb.scalar_bar.number_of_labels = 6
-# cb.label_text_property.font_size = 16
-frange = (0, 6e-3)
-frange = None
-if frange is not None:
-    fmin, fmax = frange
-    fmid = (fmin + fmax) / 2
-    brain.scale_data_colormap(
-        fmin=fmin, fmid=fmid, fmax=fmax, transparent=False, verbose=False
-    )
-title = 'test' * 10
-title_size = 1
-title_height = 0.9
-# mlab.title(title, size=title_size, height=title_height)
-sd = 1000 * sds_sensor[SRC_IND]
-mlab.title(f'Sensor-based, SD={sd:.2f} mm')
+src_datas = list()
+titles = list()
+for ind in range(20):
+    src_datas.append(Sin[:, ind])
+    L, m = _idx_deg_ord(ind)
+    #title = f'{L=}, {m=}'
+    title = f'({L}, {m})'
+    titles.append(title)
+_montage_mlab_trimesh(locs, tri, src_datas, titles, 'vsh_basis_trimesh.png', ncols_max=5, distance=.5)
 
 
 
 
-# %%
-# visualize the inverse
-fig = mlab.figure(bgcolor=FIG_BG_COLOR)
-pt_scale = 0.003
-src_coords_all = np.concatenate((src_coords[0], src_coords[1]))
-nodes = _mlab_points3d(src_coords_thishemi, figure=fig, scale_factor=pt_scale)
-nodes.glyph.scale_mode = 'scale_by_vector'
-# MNE solution is scalar (fixed-orientation leadfield); plot the absolute value
-current_abs = np.abs(inv_sol)
-focality = current_abs.max() / current_abs.sum()
-focality = len(np.where(current_abs > current_abs.max() / 3)[0])
-# L-specific colormap scaling (each L scaled by its maximum)
-colors = current_abs / current_abs.max()
-# uniform scaling across L values
-# colors = current_abs / .05
-nodes.mlab_source.dataset.point_data.scalars = colors
-# plot the source as arrow
-src_loc = src_coords_thishemi[None, SRC_IND, :]
-src_normal = src_normals[HEMI_IND][None, SRC_IND, :]
-_mlab_quiver3d(
-    src_loc, src_normal, figure=fig, scale_factor=0.05, color=(1.0, 1.0, 1.0)
-)
-mlab.view(170, 50, roll=60)  # lateral view
-# mlab.title(str(TIKH_L))
-
-
-
-# %% L-dependent MNP solution with noise
-# this picks a single source from the leadfield matrix, then adds noise and does MNP in multipole domain
-# an alternative would be to define a noisy version of the resolution matrix
+# %% MS FIG 7:
+# L-dependent MNP solution with noise.
+# Pick a single source from the leadfield matrix, add noise and do MNP in the multipole domain.
 
 REGU_METHOD = 'tikhonov'
 # in literature, values of ~1e-5 to ~1e-11 have been considered; 1e-8 is reasonable
@@ -1132,175 +851,3 @@ _montage_pysurfer_brain_plots(
     title_width=0.4,
     do_colorbar=DO_COLORBAR,
 )
-
-
-# %% L-dependent MNP solution with noise
-# added 2.3.2022 PSF
-
-REGU_METHOD = 'tikhonov_naive'
-# in literature, values of ~1e-5 to ~1e-11 have been considered; 1e-8 is reasonable
-LAMBDA = 0
-PINV_RCOND = 1e-20
-FIG_BG_COLOR = (0.3, 0.3, 0.3)
-FIGSIZE = (400, 300)
-NCOLS_MAX = 5
-SNR = 1e10  # desired SNR (defined as ratio of signal vector norms)
-MAX_LIN = 12
-frange = 'separate'  # individual auto
-
-SRC_IND = superf_node_inds[931]  # pick one of superficial nodes
-SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
-src_lead_sensors = leads_thishemi_sc[:, SRC_IND]
-# XXX: noisevec mag scaling?
-noisevec = np.random.randn(*src_lead_sensors.shape)
-noisevec /= (np.linalg.norm(noisevec) * SNR)
-noisevec *= np.linalg.norm(src_lead_sensors)
-src_lead_sensors_noisy = src_lead_sensors + noisevec
-
-# select multipole components to include according to L
-theLs = list(range(1, L + 1))
-include = np.where(np.isin(basisvec_L, theLs))[0]
-Sin_red = Sin[:, include]
-# L-limited multipole transformation of leadfield
-xin_leads_red = np.squeeze(np.linalg.pinv(Sin_red) @ leads_all_sc)
-lead_cond = np.linalg.cond(xin_leads_red)
-# multipole components for noisy forward field
-lead_cond = np.linalg.cond(xin_leads_red) / np.linalg.cond(xin_leads_red, -2)
-scond = np.linalg.cond(Sin_red) / np.linalg.cond(Sin_red, -2)
-print(f'{L=} condition leadfield: {lead_cond:.2e} Sin: {scond}')
-xin_source_red = np.squeeze(np.linalg.pinv(Sin_red) @ src_lead_sensors_noisy)
-# do the minimum norm inverse
-# NOTE: need for regularization depends on the xin leadfield matrix
-# regularization of well-conditioned matrices may screw things up
-inv_sol = _min_norm_pinv(
-    xin_leads_red,
-    xin_source_red,
-    method=REGU_METHOD,
-    tikhonov_lambda=LAMBDA,
-    rcond=PINV_RCOND,
-)[:3732]                        # XXX: hack!!
-
-outfn = 'foo.png'
-
-
-
-
-
-
-
-# %% L-filtered min. norm solution, noisy version
-# this first computes multipole coefficients for the forward and leadfield,
-# and then filters according to L
-# +save figs into png files
-CUMUL = True  # include single L at a time, or all components upto L
-SAVE_FIGS = True
-FIG_BG_COLOR = (0.3, 0.3, 0.3)
-FIG_BG_COLOR = (1., 1., 1.)
-FIGSIZE = (400, 300)
-NCOLS_MAX = 5
-REL_NOISE = 0.1  # noise relative to std. dev of signal
-REGU_METHOD = 'pinv'
-TIKH_L = 1e-27
-PINV_RCOND = 1e-10
-SRC_IND = test_sources['superficial_z']  # pick a source
-# src_ind = 1330  # alternative source
-mlab.options.offscreen = SAVE_FIGS
-fignames = list()
-inverses = list()
-# get multipole coefficients for all leadfields
-leads_thishemi_sc = _scale_magmeters(leads_thishemi, info, MAG_SCALING)
-src_lead_sensors = leads_thishemi_sc[:, SRC_IND]
-noisevec = (
-    REL_NOISE * np.std(src_lead_sensors) * np.random.randn(*src_lead_sensors.shape)
-)
-src_lead_sensors_noisy = src_lead_sensors + noisevec
-src_lead_multipole = np.linalg.pinv(Sin) @ src_lead_sensors_noisy
-xin_leads = np.squeeze(np.linalg.pinv(Sin) @ leads_thishemi_sc)
-
-for L in range(1, LIN + 1):
-    theLs = list(range(1, L + 1)) if CUMUL else [L]
-    print(theLs)
-    # select multipole components to include according to given L values
-    include = np.where(np.isin(basisvec_L, theLs))[0]
-    xin_leads_filt = xin_leads[include]
-    src_lead_red = src_lead_multipole[include]
-    # NOTE: need for regularization depends on the xin leadfield matrix
-    # regularization of well-conditioned matrices may screw up things
-    # Tikhonov
-    inv_sol = _min_norm_pinv(
-        xin_leads_filt,
-        src_lead_red,
-        method=REGU_METHOD,
-        tikhonov_lambda=TIKH_L,
-        rcond=PINV_RCOND,
-    )
-    inverses.append(inv_sol)
-    # visualize the inverse
-    fig = mlab.figure(bgcolor=FIG_BG_COLOR)
-    pt_scale = 0.003
-    src_coords_all = np.concatenate((src_coords[0], src_coords[1]))
-    nodes = _mlab_points3d(src_coords_thishemi, figure=fig, scale_factor=pt_scale)
-    nodes.glyph.scale_mode = 'scale_by_vector'
-    # MNE solution is scalar (fixed-orientation leadfield); plot the absolute value
-    node_strength = np.abs(inv_sol)
-    focality = node_strength.max() / node_strength.sum()
-    focality = len(np.where(node_strength > node_strength.max() / 3)[0])
-    # L-specific colormap scaling (each L scaled by its maximum)
-    colors = node_strength / node_strength.max()
-    # uniform scaling across L values
-    # colors = current_abs / .05
-    nodes.mlab_source.dataset.point_data.scalars = colors
-    # plot the source as arrow
-    src_loc = src_coords_thishemi[None, SRC_IND, :]
-    src_normal = src_normals[HEMI_IND][None, SRC_IND, :]
-    _mlab_quiver3d(
-        src_loc, src_normal, figure=fig, scale_factor=0.05, color=(1.0, 1.0, 1.0)
-    )
-    mlab.view(170, 50, roll=60)  # lateral view
-    mlab.title('L=%d, f=%d' % (L, focality))
-    cumul_desc = 'cumul' if CUMUL else 'single'
-    fname = 'inverse_%s_%d.png' % (cumul_desc, L)
-    if SAVE_FIGS:
-        # save fig for the montage
-        fname = _named_tempfile(suffix='.png')
-        print('saving %s' % fname)
-        mlab.savefig(fname, size=FIGSIZE, figure=fig)
-        fignames.append(fname)
-        mlab.close(fig)
-if SAVE_FIGS:
-    # complete the montage using empty figures, so that the background is
-    # consistent
-    n_last = NCOLS_MAX - len(fignames) % NCOLS_MAX
-    if n_last == NCOLS_MAX:
-        n_last = 0
-    for k in range(n_last):
-        fig = mlab.figure(bgcolor=FIG_BG_COLOR)
-        fname = _named_tempfile(suffix='.png')
-        mlab.savefig(fname, size=FIGSIZE, figure=fig)
-        fignames.append(fname)
-    mlab.options.offscreen = False  # restore
-    # set filename for montage image
-    montage_fn = 'inverse_%s.png' % cumul_desc
-    montage_fn = f'mnp_{cumul_desc}_{array_name}.png'
-    _montage_figs(fignames, montage_fn, ncols_max=NCOLS_MAX)
-del fignames
-plt.figure()
-plt.plot(src_lead_sensors)
-plt.plot(noisevec)
-plt.legend(('source field', 'noise'))
-
-
-# %% plot some VSHs on array trimesh
-
-inds, locs, tri = _make_array_tri(info)
-
-src_datas = list()
-titles = list()
-for ind in range(20):
-    src_datas.append(Sin[:, ind])
-    L, m = _idx_deg_ord(ind)
-    #title = f'{L=}, {m=}'
-    title = f'({L}, {m})'
-    titles.append(title)
-_montage_mlab_trimesh(locs, tri, src_datas, titles, 'vsh_basis_trimesh.png', ncols_max=5, distance=.5)
-
