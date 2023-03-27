@@ -321,7 +321,6 @@ pt_scale = 0.3e-2
 src_color = (0.8, 0, 0)
 n_closest = 100
 # transform src coords into device frame
-
 head_dev_trans = invert_transform(info['dev_head_t'])
 node_coords_all_dev = apply_trans(head_dev_trans, node_coords_all)
 ips = _prep_mf_coils(info)[0]
@@ -348,23 +347,11 @@ colors[closest_inds] = 1
 pts.glyph.scale_mode = 'scale_by_vector'
 pts.mlab_source.dataset.point_data.scalars = colors
 
-# highlight some other sources
-# colors = np.zeros(node_coords_all_dev.shape[0])
-# colors[sd_improves_inds] = 1
-# pts.glyph.scale_mode = 'scale_by_vector'
-# pts.mlab_source.dataset.point_data.scalars = colors
-
-# color some ips
-# colors = np.zeros(ips.shape[0])
-# inds = np.arange(850, 1000)
-# colors[inds] = 1
-# pts_ips.glyph.scale_mode = 'scale_by_vector'
-# pts_ips.mlab_source.dataset.point_data.scalars = colors
 
 
 # %% FIND superficial nodes by using the cortical mesh
 # XXX: this is still hemi-specific, i.e. resulting indices will be into the
-# nodes of the chosen hemi and not the full source space
+# nodes of the chosen hemi instead of the full source space
 
 INITIAL_VERTEX_SPACING = 1e-3
 ZLIM = (
@@ -427,16 +414,15 @@ superf_node_normals = src_normals_thishemi[superf_node_inds, :]
 fig = mlab.figure()
 _mlab_trimesh(pts_, tris_, figure=fig, transparent=True)
 _mlab_points3d(superf_node_coords, figure=fig, scale_factor=2e-3)
-#_mlab_quiver3d(superf_node_coords, superf_node_normals, figure=fig, scale_factor=.005)
+_mlab_quiver3d(superf_node_coords, superf_node_normals, figure=fig, scale_factor=.005)
 
 
 # %% visualize source loc and ori
 
 SRC_IND = superf_node_inds[830]
-print(f'focality={sds[16][SRC_IND]*1e3}')
-fig = mlab.figure(bgcolor=FIG_BG_COLOR)
+fig = mlab.figure()
 SURF = 'white'
-#Brain = mne.viz.get_brain_class()
+
 brain = Brain(
     subject, HEMI, SURF, subjects_dir=subjects_dir, background='white', alpha=1, figure=fig
 )
@@ -523,22 +509,19 @@ node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1
 sds = dict()
 xin_res_kernels = dict()
 focs = dict()
-# Method for getting the multipole-based leadfield for each L:
 #
-# OLD METHOD (FIT_REDUCED_BASES=False): decompose the sensor-based leadfield
-# into the full range of available L components first, then pick the components
-# for each L in turn. In principle, this has the advantage of avoiding aliasing,
-# since the initial fit includes all spatial freqs. If L is very high, the
-# initial decomposition may require regularization.
+# FIT_REDUCED_BASES=False: decompose the sensor-based leadfield into the full
+# range of available L components first, then pick the components for each L in
+# turn. In principle, this has the advantage of avoiding aliasing, since the
+# initial fit includes all spatial freqs. If L is very high, the initial
+# decomposition may require regularization.
 #
-# NEW METHOD (FIT_REDUCED_BASES=True): fit leadfield onto the reduced-order
-# basis at each L.
+# FIT_REDUCED_BASES=True: fit leadfield onto the reduced-order basis at each L.
 #  
 FIT_REDUCED_BASES = True
-# how to regularize when computing the resolution kernels
-RES_METHOD = 'tikhonov'
-RES_RCOND = 1e-15  # for pinv; 1e-7 gives reasonable regularization
-RES_TIKHONOV_LAMBDA = 1e-11
+RES_METHOD = 'tikhonov'  # how to regularize when computing the resolution kernels
+RES_RCOND = 1e-15  # rcond if regularizing with pinv
+RES_TIKHONOV_LAMBDA = 1e-11  # Tikhonov lambda, if regularizing with Tikhonov
 xin_lead_conds = list()
 xin_leads = list()
 for L in range(1, LIN + 1):
@@ -562,13 +545,10 @@ for L in range(1, LIN + 1):
 # compute resolution kernel, spatial dispersion and focality for sensor-based leadfield
 res_kernel = _resolution_kernel(leads_all_sc, method=RES_METHOD, tikhonov_lambda=RES_TIKHONOV_LAMBDA, rcond=RES_RCOND)
 sds_sensor = _spatial_dispersion(res_kernel, src_dij_all)
-sds_sensor[1251]
 
-#  same but lambda dependent
+# spatial dispersion vs. lambda when using Tikhonov regularization for the resolution kernels
 sds_lambda = dict()
 lambdas = 10.**np.arange(-5, -12, -1)
-Lvals = list(range(1, 17))
-
 for _lambda in lambdas:
     res_kernel = _resolution_kernel(leads_all_sc, method='tikhonov', tikhonov_lambda=_lambda)
     sds_lambda[_lambda] = _spatial_dispersion(res_kernel, src_dij_all)
@@ -577,6 +557,7 @@ for _lambda in lambdas:
 # %% MS FIG 4:
 # plot SD vs lambda/L - separate plots
 outfn = figuredir / 'mean_PSF_SD_vs_L_and_lambda.png'
+Lvals = list(range(1, LIN + 1))
 REDUCER_FUN = np.mean
 YLABEL = 'Mean PSF spatial dispersion (mm)'
 YTICKS = list(range(20, 90, 10))
@@ -606,14 +587,13 @@ SURF = 'inflated'
 outfn = figuredir / f'dispersion_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
 # restrict dispersion to current hemi
 sds_thishemi = [sd[HEMI_SLICE] for sd in sds.values()]
-# scalarize the dispersion and convert to mm
-
 titles = list()
 src_datas = list()
 
 # multipole-based data
 for L in range(MIN_LIN, MAX_LIN+1, N_SKIP):
     src_data = sds[L][HEMI_SLICE]
+    # scalarize and convert m->mm
     src_data = 1e3 * _scalarize_src_data(src_data, nverts_thishemi, reducer_fun=np.mean)
     src_datas.append(src_data)
     title = f'L=1..{L}'
@@ -621,6 +601,7 @@ for L in range(MIN_LIN, MAX_LIN+1, N_SKIP):
 
 # sensor-based data
 src_data = sds_sensor[HEMI_SLICE]
+# scalarize and convert m->mm
 src_data = 1e3 * _scalarize_src_data(src_data, nverts_thishemi, reducer_fun=np.mean)
 title = f'sensor'
 src_datas.append(src_data)

@@ -85,6 +85,7 @@ def _montage_pysurfer_brain_plots(
     mlab.options.offscreen = True
     fignames = list()
     assert len(titles) == nfigs
+    fn_out = str(fn_out)
 
     for src_data, title, idx in zip(src_datas, titles, range(nfigs)):
         fig = mlab.figure()
