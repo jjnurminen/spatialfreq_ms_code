@@ -12,8 +12,8 @@ from mne.io.constants import FIFF
 import numpy as np
 from mayavi import mlab
 from surfer import Brain
-from mne.transforms import invert_transform, apply_trans, _deg_ord_idx
-from mne.preprocessing.maxwell import _sss_basis, _sss_basis_basic, _prep_mf_coils
+from mne.transforms import invert_transform, apply_trans
+from mne.preprocessing.maxwell import _sss_basis_basic, _prep_mf_coils
 from mne.forward import _create_meg_coils
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -25,19 +25,16 @@ from megsimutils.viz import (
     _mlab_quiver3d,
     _mlab_points3d,
     _mlab_trimesh,
-    _mlab_colorblobs,
     _make_array_tri,
 )
 from megsimutils.envutils import _ipython_setup
 
 from misc import (
-    _vector_angles,
     _prettyprint_xyz,
     _normalize_columns,
     subspace_angles_deg,
     _find_points_in_range,
     _unit_impulse,
-    _moore_penrose_pseudoinverse,
 )
 from forward_comp import (
     _split_leadfield,
@@ -48,7 +45,6 @@ from forward_comp import (
     _idx_deg_ord,
     _min_norm_pinv,
     _scalarize_src_data,
-    _decompose_sigvec,
     _limit_L,
     _resolution_kernel,
     _spatial_dispersion,
@@ -63,7 +59,7 @@ _ipython_setup(enable_reload=True)
 plt.rcParams['figure.dpi'] = 150
 
 homedir = Path.home()
-projectpath = homedir / 'projects/samu2019'  # where the code resides
+projectpath = homedir / 'repos/spatialfreq_ms_code'  # where the code resides
 assert projectpath.is_dir()
 figuredir = projectpath  # where to put the figures
 assert figuredir.is_dir()
@@ -74,7 +70,7 @@ HEAD_SHIFT = np.array([0, -0e-2, -0e-2])
 # whether to replace default sensor data (306-ch) with a new geometry
 LOAD_ALTERNATE_ARRAY = True
 if LOAD_ALTERNATE_ARRAY:
-    alt_array_name = Path('RADIAL_N10000_R120mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
+    alt_array_name = Path('RADIAL_N1000_R120mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
 else:
     alt_array_name = None
 
@@ -135,7 +131,7 @@ print('\n')
 if LOAD_ALTERNATE_ARRAY:
     print(f'using saved array: {alt_array_name}')
     array_name = alt_array_name.stem  # name without extension
-    with open(alt_array_name, 'rb') as f:
+    with open(projectpath / alt_array_name, 'rb') as f:
         info = pickle.load(f)
 else:
     array_name = 'VV-306'
@@ -475,30 +471,12 @@ _array_name = str(array_name).lower()
 head_dev_trans = invert_transform(info['dev_head_t'])
 print(f'array: {array_name}')
 if array_name == 'VV-306':
-    LIN, LOUT = 16, 3
+    LIN, LOUT = 9, 3
     # use head model origin
     sss_origin = apply_trans(head_dev_trans, HEAD_ORIGIN)
-    # OBS: experiment
-    sss_origin = np.array([0.0, 0.025, 0.0])  # origin of device coords
-elif 'compumedics' in _array_name:
-    LIN, LOUT = 8, 3
-    # use head model origin
-    sss_origin = apply_trans(head_dev_trans, HEAD_ORIGIN)
-elif 'cortex' in _array_name:  # the 'cortical' OPM array
-    LIN, LOUT = 20, 3
-    sss_origin = np.array([0.0, 0.0, 0.015])  # origin of device coords
-elif 'opm' in _array_name:  # some other OPM array
-    LIN, LOUT = 20, 3
-    # for helmetlike OPM array, ensure that origin is above the helmet rim;
-    # moving origin below z = 0 causes basis condition number to blow up
-    # this is (apparently) due to the reduced solid angle coverage
-    sss_origin = np.array([0.005, 0.02, 0.0])  # origin of device coords
 elif 'radial' in _array_name:  # radial-spherical
-    LIN, LOUT = 20, 3
+    LIN, LOUT = 13, 3
     sss_origin = np.array([0.0, -0.0, 0.0])  # origin of device coords
-elif 'barbute' in _array_name:  # barbute helmet
-    LIN, LOUT = 20, 3
-    sss_origin = np.array([0.0, 0.0, 0.0])  # origin of device coords
 else:
     raise RuntimeError('Unknown array')
 

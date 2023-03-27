@@ -10,8 +10,8 @@ import numpy as np
 from mayavi import mlab
 from surfer import Brain
 from megsimutils.fileutils import _named_tempfile, _montage_figs
-from megsimutils.viz import _mlab_points3d, _mlab_quiver3d
-from trimesh.visual import color
+from megsimutils.viz import _mlab_points3d, _mlab_quiver3d, _mlab_trimesh
+
 
 
 def _montage_pysurfer_brain_plots(
@@ -22,6 +22,9 @@ def _montage_pysurfer_brain_plots(
     src_vertices,
     hemi,
     fn_out,
+    surf=None,
+    thresh=None,
+    smoothing_steps=None,
     frange=None,
     ncols_max=None,
     colormap=None,
@@ -29,19 +32,33 @@ def _montage_pysurfer_brain_plots(
     title_width=None,
     do_colorbar=True,
 ):
-    """Montage several PySurfer -based plots into a .png file.
+    """Create and montage several PySurfer -based plots into a .png file.
 
-    src_datas : list of source-based scalar data arrays
-    titles : corresponding figure titles
-    frange : tuple of (fmin, fmax), min and max values for scaling the colormap
-    src_vertices : indices of source vertices
-    hemi : hemisphere to plot ('lh' or 'rh')
-    fn_out : path of .png file to write
-    ncols_max : max. n of columns in montaged figure
+    Parameters:
+    -----------
+    subject : str
+    subjects_dir : str
+    src_datas : list
+        Source-based scalar data arrays, one for each figure.
+    titles : list
+        Corresponding figure titles.
+    frange : tuple | str | None
+        Use tuple of (fmin, fmax) to set min and max values for scaling the colormap.
+        If None, use global min/max of source data.
+        If 'separate', each plot will be individually auto-scaled.
+    src_vertices : array
+        Indices of source vertices.
+    hemi : str
+        Hemisphere to plot ('lh' or 'rh').
+    fn_out : str
+        Name of .png file to write
+    ncols_max : int
+        Max. n of columns in montaged figure.
     """
     FIG_BG_COLOR = (1.0, 1.0, 1.0)
     brains = list()  # needed to retain refs to the PySurfer figs
-    surf = 'white'
+    if surf is None:
+        surf = 'inflated'
     FIGSIZE = (400, 300)  # size of a single figure (pixels)
     if ncols_max is None:
         ncols_max = 4
@@ -64,13 +81,10 @@ def _montage_pysurfer_brain_plots(
         pass
     else:
         fmin, fmax = frange
-
+      
     mlab.options.offscreen = True
     fignames = list()
     assert len(titles) == nfigs
-
-    # convert possible path objects
-    fn_out = str(fn_out)
 
     for src_data, title, idx in zip(src_datas, titles, range(nfigs)):
         fig = mlab.figure()
@@ -89,8 +103,9 @@ def _montage_pysurfer_brain_plots(
             vertices=src_vertices,
             colormap=colormap,
             hemi=hemi,
+            thresh=thresh,
             colorbar=plot_colorbar,
-            smoothing_steps='nearest',
+            smoothing_steps=smoothing_steps,
         )
         if plot_colorbar:
             # we need to dive deep into the brain to get a handle on the colorbar
@@ -109,15 +124,16 @@ def _montage_pysurfer_brain_plots(
 
         # temporarily save fig for the montage
         fname = _named_tempfile(suffix='.png')
-        print(f'creating figure {idx}/{nfigs}')
+        print(f'creating figure {idx+1}/{nfigs}')
         mlab.savefig(fname, size=FIGSIZE, figure=fig)
         fignames.append(fname)
         mlab.close(fig)
 
     # complete the montage using empty figures, so that the background is
     # consistent
-    n_last = ncols_max - nfigs % ncols_max
-    if n_last == ncols_max:
+    n_last = ncols_max - nfigs % ncols_max  # n of figs on last row
+    # do not fill first row, if it's the only one
+    if n_last == ncols_max or nfigs < ncols_max:
         n_last = 0
     for k in range(n_last):
         fig = mlab.figure(bgcolor=FIG_BG_COLOR)
@@ -210,6 +226,54 @@ def _montage_mlab_brain_plots(
     mlab.options.offscreen = False  # restore
     _montage_figs(fignames, fn_out, ncols_max=ncols_max)
     return src_datas_scaled
+
+
+
+def _montage_mlab_trimesh(locs, tri, src_datas, titles, fn_out, ncols_max=None, distance=None):
+    """Montage trimesh plots"""
+
+    #FIG_BG_COLOR = (0.3, 0.3, 0.3)
+    FIG_BG_COLOR = (1., 1., 1.)
+    FIGSIZE = (400, 300)
+
+    if ncols_max is None:
+        ncols_max = 4
+
+    if distance is None:
+        distance = .6  # view distance
+
+    nfigs = len(src_datas)
+
+    mlab.options.offscreen = True
+
+    fignames = list()
+    for src_data, title, idx in zip(src_datas, titles, range(nfigs)):
+        fig = mlab.figure(bgcolor=FIG_BG_COLOR)
+        _mlab_trimesh(locs, tri, scalars=src_data, figure=fig)
+        mlab.view(distance=distance)
+        #mlab.title(title, color=(0., 0., 0.))
+        mlab.text(0, .8, title, width=.2, color=(0., 0., 0.))
+        # save fig for the montage
+        fname = _named_tempfile(suffix='.png')
+        print(f'creating figure {idx}/{nfigs}')
+        mlab.savefig(fname, size=FIGSIZE, figure=fig)
+        fignames.append(fname)
+        mlab.close(fig)
+
+    # complete the montage using empty figures, so that the background is
+    # consistent
+    n_last = ncols_max - nfigs % ncols_max
+    if n_last == ncols_max:
+        n_last = 0
+    for k in range(n_last):
+        fig = mlab.figure(bgcolor=FIG_BG_COLOR)
+        fname = _named_tempfile(suffix='.png')
+        mlab.savefig(fname, size=FIGSIZE, figure=fig)
+        fignames.append(fname)
+
+    mlab.options.offscreen = False  # restore
+    _montage_figs(fignames, fn_out, ncols_max=ncols_max)
+
 
 
 def _rescale_brain_colormap(
