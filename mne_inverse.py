@@ -475,7 +475,7 @@ if array_name == 'VV-306':
     # use head model origin
     sss_origin = apply_trans(head_dev_trans, HEAD_ORIGIN)
 elif 'radial' in _array_name:  # radial-spherical
-    LIN, LOUT = 13, 3
+    LIN, LOUT = 16, 3
     sss_origin = np.array([0.0, -0.0, 0.0])  # origin of device coords
 else:
     raise RuntimeError('Unknown array')
@@ -518,112 +518,7 @@ node_coords_thishemi_dev = apply_trans(head_dev_trans, node_coords_thishemi)
 node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1)
 
 
-# %% CHECK SSS geometry
-pt_scale = 2e-3
-# the integration points in device coords
-ips = _prep_mf_coils(info)[0]
-ip_dists = np.linalg.norm(ips - sss_origin, axis=1)
-rmax_sss = ip_dists.min()
-# highlight sources outside SSS sphere
-inds_bad = np.where(node_origin_dists > rmax_sss)[0]
-n_bad = len(inds_bad)
-print('%d bad sources' % n_bad)
-fig = mlab.figure()
-pts = _mlab_points3d(node_coords_thishemi_dev, figure=fig, scale_factor=pt_scale)
-_mlab_points3d(ips, figure=fig, scale_factor=pt_scale / 2)
 
-# _mlab_quiver3d(
-#    src_coords_thishemi_dev[inds_bad, :], src_normals_thishemi[inds_bad, :], figure=fig, scale_factor=5e-3, color=(1.0, 1.0, 1.0)
-# )
-
-colors = np.zeros(node_coords_thishemi_dev.shape[0])
-colors[inds_bad] = 1
-pts.glyph.scale_mode = 'scale_by_vector'
-pts.mlab_source.dataset.point_data.scalars = colors
-# plot the SSS 'inner sphere'
-pi = np.pi
-cos = np.cos
-sin = np.sin
-phi, theta = np.mgrid[0:pi:101j, 0 : 2 * pi : 101j]
-x = rmax_sss * sin(phi) * cos(theta) + sss_origin[0]
-y = rmax_sss * sin(phi) * sin(theta) + sss_origin[1]
-z = rmax_sss * cos(phi) + sss_origin[2]
-mlab.mesh(x, y, z, opacity=0.35, figure=fig)
-# ip-source distances (indices to this hemi)
-node_surf_dists = list()
-for node_ind in range(node_coords_thishemi.shape[0]):
-    node_loc = node_coords_thishemi_dev[node_ind, :]
-    dr = ips - node_loc
-    _mindist = np.linalg.norm(dr, axis=1).min()
-    node_surf_dists.append(_mindist)
-node_surf_dists = np.array(node_surf_dists)
-
-
-# %% check leadfield-basis match
-ANG_QUANTILE = 0.995
-STEP = 5  # step for looping over source indices (undersample for speedup)
-basis_angles = np.zeros(nsrc_valid_thishemi) * np.nan
-for k, SRC_IND in enumerate(np.arange(0, nsrc_valid_thishemi, STEP)):
-    lead_unshifted = leads_thishemi[:, SRC_IND].copy()
-    lead_unshifted_sc = _scale_magmeters(lead_unshifted, info, MAG_SCALING)
-    basis_angles[SRC_IND] = subspace_angles_deg(Sin, lead_unshifted_sc)
-print('Mean leadfield-basis angle: %.2f deg' % np.nanmean(basis_angles))
-print('Worst leadfield-basis angle: %.2f deg' % np.nanmax(basis_angles))
-print('%g quantile: %.2f' % (ANG_QUANTILE, np.nanquantile(basis_angles, ANG_QUANTILE)))
-
-
-# %% plot some leads
-fig, axs = plt.subplots(4, 2)
-for k, ax in enumerate(axs.flat):
-    ax.plot(leads_thishemi[:, k])
-fig.suptitle(f'some forwards for {array_name}')
-
-
-# %% study representation of signal energy (single source)
-node_ind = np.where(test_sources['superficial_z'])[0]  # pick a source
-node_ind = [1014]  # something else
-leads_thishemi_sc = _scale_magmeters(leads_thishemi, info, MAG_SCALING)
-sigvec = leads_thishemi_sc[:, node_ind]
-sigvec_L = _limit_L(sigvec, Sin, basisvec_L)
-cum_energy = np.linalg.norm(sigvec_L, axis=0) / np.linalg.norm(sigvec) * 100
-plt.plot(np.arange(1, LIN + 1), cum_energy)
-plt.xticks(np.arange(1, LIN + 1))
-# plt.ylim([0, 100])
-plt.grid()
-
-
-# %% study representation of signal energy (multipole sources) vs Lin
-# this calculates the ratio of 2-norms of the L-limited and full signal
-# space vecs
-leads_thishemi_sc = _scale_magmeters(leads_thishemi, info, MAG_SCALING)
-node_inds = np.where(node_dists_thishemi > 0.06)[0]  # pick superficial sources
-cergs = list()
-nsrcs = len(node_inds)
-for k, node_ind in enumerate(node_inds):
-    sigvec = leads_thishemi_sc[:, node_ind]
-    sigvec_L = _limit_L(sigvec, Sin, basisvec_L)
-    cum_energy = np.linalg.norm(sigvec_L, axis=0) / np.linalg.norm(sigvec) * 100
-    cergs.append(cum_energy)
-    if not k % 10:
-        print(f'computing source representation: {100 * k / nsrcs:.1f}%')
-cergs = np.array(cergs)
-
-
-# %% plot the above
-# plt.plot(np.arange(1, LIN + 1), cergs.mean(axis=0), label='mean')
-# plt.plot(np.arange(1, LIN + 1), cergs.min(axis=0), label='worst')
-# plt.plot(np.arange(1, LIN + 1), cergs.max(axis=0), label='best')
-plt.plot(np.arange(1, LIN + 1), cergs.T)
-# plt.plot(np.arange(1, LIN + 1), np.mean(cergs, axis=0), 'k--')
-plt.xticks(np.arange(1, LIN + 1))
-# plt.ylim([0, 100])
-plt.grid()
-plt.ylabel('Relative signal vector norm (%)')
-plt.xlabel('Lin')
-plt.title(f'Relative norm vs. maximum Lin, {array_name}')
-
-
-# ***
 # %% compute resolution kernel, spatial dispersion and focality for multipole leadfields
 sds = dict()
 xin_res_kernels = dict()
@@ -663,43 +558,25 @@ for L in range(1, LIN + 1):
     sds[L] = _spatial_dispersion(res_kernel, src_dij_all)
     print(f'{sds[L][FAV_SOURCE]:2f}')
     focs[L] = _focality(res_kernel)
-    
 
-
-# %% compute resolution kernel, spatial dispersion and focality for sensor-based leadfield
-# reg params defined above
+# compute resolution kernel, spatial dispersion and focality for sensor-based leadfield
 res_kernel = _resolution_kernel(leads_all_sc, method=RES_METHOD, tikhonov_lambda=RES_TIKHONOV_LAMBDA, rcond=RES_RCOND)
 sds_sensor = _spatial_dispersion(res_kernel, src_dij_all)
 sds_sensor[1251]
 
-
-# %% same but lambda dependent
+#  same but lambda dependent
 sds_lambda = dict()
 lambdas = 10.**np.arange(-5, -12, -1)
 Lvals = list(range(1, 17))
 
-for _lambda in reversed(lambdas):
+for _lambda in lambdas:
     res_kernel = _resolution_kernel(leads_all_sc, method='tikhonov', tikhonov_lambda=_lambda)
     sds_lambda[_lambda] = _spatial_dispersion(res_kernel, src_dij_all)
 
 
-# %% plot SD vs lambda/L - combined plot with twin axes
-plt.rcParams['figure.dpi'] = 150
-(fig, ax) = plt.subplots()
-plt.semilogx(lambdas, [1e3*sds_lambda[l][:].mean() for l in lambdas], label='sensor-based')
-plt.xlabel('$\lambda$ for sensor-based inverse')
-plt.ylabel('PSF spatial dispersion (mm)')
-ax.invert_xaxis()
-ax2 = plt.twiny(ax)
-plt.xticks(Lvals)
-plt.xlabel('Maximum L for multipole-based inverse')
-ax2.plot(Lvals, [1e3*sds[L][:].mean() for L in Lvals], 'b', label='multipole-based')
-fig.legend(loc="upper right", bbox_to_anchor=(.99, .99), bbox_transform=ax.transAxes)
-plt.savefig('SD_vs_L_and_lambda.png')
-
-
-
-# %% plot SD vs lambda/L - separate plots
+# %% MS FIG 4:
+# plot SD vs lambda/L - separate plots
+outfn = figuredir / 'mean_PSF_SD_vs_L_and_lambda.png'
 REDUCER_FUN = np.mean
 YLABEL = 'Mean PSF spatial dispersion (mm)'
 YTICKS = list(range(20, 90, 10))
@@ -718,102 +595,7 @@ ax2.plot(Lvals, [1e3*REDUCER_FUN(sds[L][:]) for L in Lvals], 'r', label='multipo
 #ax2.set_ylim((25, 80))
 ax2.set_yticks(YTICKS)
 plt.tight_layout()
-plt.savefig('mean_PSF_SD_vs_L_and_lambda.png')
-
-
-# %% spatial dispersion histograms for different L values
-for L in reversed(range(6, LIN+1, 2)):
-    plt.hist(sds[L], label=f'{L=}', bins=50)
-    plt.xlim([0, .08])
-plt.legend()    
-
-
-# %% plot leadfield conditioning
-# XXX: due to different numbers of "sensors", it may not be valid to compare
-# sensor- and multipole-based leadfields
-LIN_list = list(range(1, LIN + 1))
-sensor_lead_cond = np.linalg.cond(leads_all_sc)
-plt.axhline(sensor_lead_cond, color='r', ls='--', label='field-based')
-plt.semilogy(LIN_list, xin_lead_conds, label='multipole-based')
-# plt.title('Multipole vs sensor-based leadfield conditioning')
-plt.xticks(LIN_list[::1])
-plt.xlabel('L')
-plt.ylabel('Condition number')
-plt.legend()
-
-plt.savefig(
-    f'multipole_leadfield_cond_{array_name}.png',
-    facecolor='w',
-    dpi=200,
-)
-
-
-# %% mpl plot dispersion, color coded curves
-
-from matplotlib import cm
-from matplotlib.colors import Normalize
-
-cmap = cm.plasma
-cdatas = node_origin_dists  # use dist from SSS origin
-norm = Normalize(vmin=cdatas.min(), vmax=cdatas.max())
-
-LIN_limit = 18  # highest LIN to plot
-sds_matrix = np.array(list(v for k, v in sds.items() if k <= LIN_limit))
-LIN_list = list(range(1, LIN_limit + 1))
-
-for k, sd in enumerate(sds_matrix.T):
-    val = cdatas[k]
-    # if val < .03:  # set a condition for curves to plot
-    plt.plot(LIN_list, sd, c=cmap(norm(val)))
-
-plt.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), label='dist from SSS origin (m)')
-
-plt.xlabel('Lin')
-plt.ylabel('Dispersion (m)')
-# plt.legend()
-plt.title(f'Dispersion vs. LIN (R>7cm)\n{array_name}', fontdict={'size': 10})
-plt.ylim([0, 0.1])
-
-plt.xticks(list(range(1, LIN_limit + 1))[::2])
-plt.savefig(
-    f'dispersion_curveplot_{FIX_ORI_DESCRIPTION}_{array_name}.png',
-    facecolor='w',
-    dpi=200,
-)
-
-
-# %% MS PLOT: plot median dispersion as function of source and Lin
-LIN_limit = 18  # highest LIN to plot
-# convert dispersion data to mm
-sds_matrix = 1e3 * np.array(list(v for k, v in sds.items() if k <= LIN_limit))
-LIN_list = list(range(1, LIN_limit + 1))
-DEEP_LIMIT = 0.06
-SUPERF_LIMIT = 0.06
-deep_node_inds = np.where(node_origin_dists < DEEP_LIMIT)[0]
-shallow_node_inds = np.where(node_origin_dists >= SUPERF_LIMIT)[0]
-plt.plot(
-    LIN_list,
-    np.median(sds_matrix[:, deep_node_inds], axis=1),
-    'k',
-    label=f'deep (d < {DEEP_LIMIT} m)',
-)
-plt.plot(
-    LIN_list,
-    np.median(sds_matrix[:, shallow_node_inds], axis=1),
-    'k--',
-    label=f'superficial (d > {SUPERF_LIMIT} m)',
-)
-plt.xlabel('Lin')
-plt.ylabel('Dispersion (mm)')
-plt.legend()
-# plt.title(f'Dispersion vs. LIN\n{array_name}')
-# plt.ylim([0, .1])
-plt.xticks(list(range(1, LIN_limit + 1))[::1])
-plt.savefig(
-    f'dispersion_median_curveplot_{FIX_ORI_DESCRIPTION}_{array_name}.png',
-    facecolor='w',
-    dpi=200,
-)
+plt.savefig(outfn)
 
 
 # %% MS PLOT: PySurfer plot of PSF spatial dispersion as function of Lin
@@ -821,6 +603,7 @@ N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13
 SURF = 'inflated'
+outfn = figuredir / f'dispersion_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
 # restrict dispersion to current hemi
 sds_thishemi = [sd[HEMI_SLICE] for sd in sds.values()]
 # scalarize the dispersion and convert to mm
@@ -843,7 +626,6 @@ title = f'sensor'
 src_datas.append(src_data)
 titles.append(title)
 
-outfn = f'dispersion_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
 fmin, fmax = 0, 60
 _montage_pysurfer_brain_plots(
     subject,
@@ -1481,47 +1263,4 @@ for ind in range(20):
     title = f'({L}, {m})'
     titles.append(title)
 _montage_mlab_trimesh(locs, tri, src_datas, titles, 'vsh_basis_trimesh.png', ncols_max=5, distance=.5)
-
-
-# %% leadfield SVD
-U, Sigma, V = np.linalg.svd(leads_all_sc)
-
-
-# %% look at L spectra of some leadfield SVD vecs
-foo = np.linalg.pinv(Sin) @ U[:, 5]
-plt.plot(foo[:50])
-
-
-
-# %% plot some SVD vectors on array trimesh
-
-inds, locs, tri = _make_array_tri(info)
-
-src_datas = list()
-titles = list()
-for k in range(20):
-    src_datas.append(U[:, k])
-    title = f'k={k+1}'.ljust(6)
-    titles.append(title)
-_montage_mlab_trimesh(locs, tri, src_datas, titles, 'svd_basis_trimesh.png', ncols_max=5, distance=.5)
-
-
-
-
-
-# %% foo
-_mlab_trimesh(locs, tri, scalars=src_datas[0])
-mlab.view(distance=.6)
-mlab.text(0, .8, 'foo', width=.2)
-
-
-
-
-
-
-
-
-
-
-
 
