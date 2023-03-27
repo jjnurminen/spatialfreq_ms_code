@@ -60,7 +60,7 @@ from viz import _montage_pysurfer_brain_plots, _montage_mlab_brain_plots
 _ipython_setup(enable_reload=True)
 
 homedir = Path.home()
-projectpath = homedir / 'projects/spatialfreq_ms_code'  # where the code resides
+projectpath = homedir / 'repos/spatialfreq_ms_code'  # where the code resides
 assert projectpath.is_dir()
 figuredir = projectpath  # where to put the figures
 assert figuredir.is_dir()
@@ -71,31 +71,7 @@ HEAD_SHIFT = np.array([0, -0e-2, -0e-2])
 # whether to replace default sensor data (306-ch) with a new geometry
 LOAD_ALTERNATE_ARRAY = True
 if LOAD_ALTERNATE_ARRAY:
-    # choose array
-    alt_array_name = Path('OPM_TRIPLESENSORS_306.dat')
-    alt_array_name = Path('QUSPIN_ZFOPM_MAG2_400chan.dat')
-    alt_array_name = Path('Compumedics_177.dat')
-    alt_array_name = Path('OPM_HELMET400_NEW.dat')
-    # alt_array_name = Path('OPM_CORTEX1400_FULL_SCALED.dat')
-    # alt_array_name = Path('RADIAL_N1000_R20cm.dat')
-    # alt_array_name = Path('RADIAL_N1000_R170mm_POINT_MAGNETOMETER.dat')
-    # alt_array_name = Path('RADIAL_N1000_R150mm_VV_MAG_T4.dat')
-    #alt_array_name = Path('RADIAL_N1000_R120mm_POINT_MAGNETOMETER.dat')
-    # alt_array_name = Path('RADIAL_N1000_R100mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
-    # alt_array_name = Path('RADIAL_N1000_R120mm_coverage3.0pi_POINT_MAGNETOMETER.dat')
-    # alt_array_name = Path('OPM_CORTEX1400_POINTLIKE.dat')
-    # alt_array_name = Path('RADIAL_N2000_R10cm_0flipped.dat')
-    # alt_array_name = Path('RADIAL_N10000_R75cm_0flipped.dat')
-    # alt_array_name = Path('BARBUTE_500_480_12cm_1.75pi.dat')
-    # alt_array_name = Path('OPM_HELMET1400.dat')
-    # alt_array_name = Path('RADIAL_N1000_R12cm_POINT_MAGNETOMETER.dat')
-    #alt_array_name = Path('RADIAL_N10000_R120mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
-    #alt_array_name = Path(
-    #    'RADIAL_N10000_R100mm_coverage4.0pi_6666flipped_POINT_MAGNETOMETER.dat'
-    #)
     alt_array_name = Path('RADIAL_N1000_R120mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
-    # alt_array_name = Path('RADIAL_N5000_R150mm_coverage4.0pi_0flipped_POINT_MAGNETOMETER.dat')
-
 else:
     alt_array_name = None
 
@@ -451,25 +427,9 @@ if array_name == 'VV-306':
     sss_origin = apply_trans(head_dev_trans, HEAD_ORIGIN)
     # OBS: experiment
     sss_origin = np.array([0.0, 0.025, 0.0])  # origin of device coords
-elif 'compumedics' in _array_name:
-    LIN, LOUT = 8, 3
-    # use head model origin
-    sss_origin = apply_trans(head_dev_trans, HEAD_ORIGIN)
-elif 'cortex' in _array_name:  # the 'cortical' OPM array
-    LIN, LOUT = 20, 3
-    sss_origin = np.array([0.0, 0.0, 0.015])  # origin of device coords
-elif 'opm' in _array_name:  # some other OPM array
-    LIN, LOUT = 20, 3
-    # for helmetlike OPM array, ensure that origin is above the helmet rim;
-    # moving origin below z = 0 causes basis condition number to blow up
-    # this is (apparently) due to the reduced solid angle coverage
-    sss_origin = np.array([0.005, 0.02, 0.0])  # origin of device coords
 elif 'radial' in _array_name:  # radial-spherical
     LIN, LOUT = 13, 3
     sss_origin = np.array([0.0, -0.0, 0.0])  # origin of device coords
-elif 'barbute' in _array_name:  # barbute helmet
-    LIN, LOUT = 20, 3
-    sss_origin = np.array([0.0, 0.0, 0.0])  # origin of device coords
 else:
     raise RuntimeError('Unknown array')
 
