@@ -653,6 +653,7 @@ _montage_pysurfer_brain_plots(
 
 # %% MS FIG 1:
 # PySurfer plot of a single source PSF as function of Lin, no regularization
+#
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13  # max LIN value to use
@@ -779,7 +780,7 @@ _montage_pysurfer_brain_plots(
 
 # %% MS FIG 5:
 # plot lead field SVD vectors on array trimesh
-
+#
 outfn = figuredir / 'svd_basis_trimesh.png'
 
 U, Sigma, V = np.linalg.svd(leads_all_sc)
@@ -799,7 +800,7 @@ _montage_mlab_trimesh(
 
 # %% MS FIG 6:
 # plot some VSHs on array trimesh
-
+#
 outfn = figuredir / 'vsh_basis_trimesh.png'
 
 inds, locs, tri = _make_array_tri(info)
