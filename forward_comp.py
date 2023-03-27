@@ -40,6 +40,8 @@ def _info_meg_normals(info):
     return Sn
 
 
+
+
 def _sensordata_to_ch_dicts(Sc, Sn, Iprot, coiltypes):
     """Convert sensor data from Sc (Mx3 locations) and Sn (Mx3 normals) into
     mne channel dicts (e.g. info['chs'][k]"""
@@ -120,6 +122,20 @@ def _split_normals(forward):
     normals_left, normals_right = np.split(normals, [split_ind], axis=0)
     return {0: normals_left, 1: normals_right}
 
+def _hemi_slice(hemi, nsrc_valid):
+    """Return a slice for picking hemi-specific data from a data array.
+    Number of sources for each hemi are N0 and N1.
+
+    Parameters:
+    -----------
+    hemi : int
+        Index for desired hemisphere (0 or 1).
+    nsrc_valid : dict
+        Dict containing the number of sources for each hemi {0: N0, 1: N1}
+    """
+    ind0 = 0 if hemi == 0 else nsrc_valid[0]
+    ind1 = nsrc_valid[0] if hemi == 0 else nsrc_valid[0] + nsrc_valid[1]
+    return slice(ind0, ind1)
 
 def _get_shifted_forwards(
     subject,
@@ -350,35 +366,39 @@ def _limit_L(sigvec, Sin, basisvec_L):
     return sigvec_lim
 
 
-def _min_norm_pinv(leadfld, sigvec, method='tikhonov', tikhonov_lambda=0, rcond=1e-15):
+def _min_norm_pinv(A, b, method='tikhonov', tikhonov_lambda=0, rcond=1e-15):
     """Minimum norm pseudoinverse (MNP) inverse solution"""
-    nsensors = leadfld.shape[0]
-    if method == 'tikhonov_naive':
+    nsensors = A.shape[0]
+    if method == 'tikhonov':
         # naive Tikhonov reg
         mnp = (
-            leadfld.T
-            @ np.linalg.inv(leadfld @ leadfld.T + tikhonov_lambda * np.eye(nsensors))
-            @ sigvec
+            A.T
+            @ np.linalg.inv(A @ A.T + tikhonov_lambda * np.eye(nsensors))
+            @ b
         )
     elif method == 'tikhonov_svd':
-        mnp = tikhonov_svd(leadfld, sigvec, tikhonov_lambda)
+        if b.ndim > 1:
+            raise ValueError('Tikhonov SVD needs a vector input for b')
+        mnp = tikhonov_svd(A, b, tikhonov_lambda)
     elif method == 'pinv':
-        mnp = np.linalg.pinv(leadfld, rcond=rcond) @ sigvec
+        mnp = np.linalg.pinv(A, rcond=rcond) @ b
+    elif method == 'unreg':
+        mnp = np.linalg.pinv(A, rcond=1e-25) @ b
     elif method == 'lstsq':
-        mnp = np.linalg.lstsq(leadfld, sigvec)[0]
+        mnp = np.linalg.lstsq(A, b)[0]
     elif method == 'scipy_lstsq':
-        mnp = scipy.linalg.lstsq(leadfld, sigvec, lapack_driver='gelsy')[0]
+        mnp = scipy.linalg.lstsq(A, b, lapack_driver='gelsy')[0]
     else:
         raise RuntimeError('Invalid method')
     return mnp
 
 
-def tikhonov_svd(A, b, lbda):
+def tikhonov_svd(A, b, _lambda):
     """Solve Ax=b for x using Tikhonov regularization. Implementation via SVD"""
     U, D, Vh = scipy.linalg.svd(A, full_matrices=False)  # XXX: scipy
     # compute SVD filter factors for Tikhonov
     # see https://en.wikipedia.org/wiki/Tikhonov_regularization
-    f_tikh = D**2 / (lbda + D**2)
+    f_tikh = D**2 / (_lambda + D**2)
     return sum(f_tikh[k] * U[:, k] @ b * Vh[k, :] / D[k] for k in range(len(D)))
 
 
@@ -488,12 +508,14 @@ def _node_to_source_index(index, fixed_ori):
         return np.arange(3 * index, 3 * index + 3)
 
 
-def _resolution_kernel(leadfld, rcond=None):
-    """MNP resolution kernel from leadfield matrix"""
-    if rcond is None:
-        rcond = 1e-15
-    # simple pinv-based inverse
-    return np.linalg.pinv(leadfld, rcond=rcond) @ leadfld
+def _resolution_kernel(leadfld, method='tikhonov', tikhonov_lambda=0, rcond=1e-15):
+    """MNP resolution kernel from leadfield matrix.
+    
+    The resolution kernel contains inverse solutions for each elementary source
+    (leadfield element) in the noiseless case. It depends on the exact inverse
+    method (also regularization etc.)
+    """
+    return _min_norm_pinv(leadfld, leadfld, method=method, tikhonov_lambda=tikhonov_lambda, rcond=rcond)
 
 
 def _spatial_dispersion(res_kernel, src_dij):
@@ -521,3 +543,4 @@ def _focality(res_kernel):
         foc = len(np.where(res_kernel[i, :] > thre)[0])
         focs.append(foc)
     return focs
+
