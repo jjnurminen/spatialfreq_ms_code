@@ -579,7 +579,8 @@ plt.tight_layout()
 plt.savefig(outfn)
 
 
-# %% MS PLOT: PySurfer plot of PSF spatial dispersion as function of Lin
+# %% MS FIG 2:
+# PySurfer plot of PSF spatial dispersion as function of Lin
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13
@@ -625,8 +626,8 @@ _montage_pysurfer_brain_plots(
 )
 
 
-# %% MS PLOT: PySurfer plot of a single source PSF as function of Lin + sensor-based PSF
-
+# %% MS FIG 1:
+# PySurfer plot of a single source PSF as function of Lin + sensor-based PSF
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13  # max LIN value to use
@@ -642,6 +643,7 @@ frange = 'separate'  # individual auto
 if not FIX_ORI:
     SRC_IND = SRC_IND[1]  # pick a single orientation
 NCOLS_MAX = 4
+outfn = figuredir / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
 
 titles = list()
 src_datas = list()
@@ -663,7 +665,6 @@ title = f'sensor, SD={sd:.0f} mm'
 src_datas.append(src_data)
 titles.append(title)
 
-outfn = f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
 _montage_pysurfer_brain_plots(
     subject,
     subjects_dir,
