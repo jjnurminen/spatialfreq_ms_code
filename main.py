@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Study the multipole-based MNP inverse.
+Simulation code for XXX et al: XXX
+
 
 @author: jussi
 """
@@ -21,15 +22,9 @@ import pickle
 import scipy
 import trimesh
 
-from megsimutils.viz import (
-    _mlab_quiver3d,
-    _mlab_points3d,
-    _mlab_trimesh,
-    _make_array_tri,
-)
-from megsimutils.envutils import _ipython_setup
+from miscutils import _ipython_setup
 
-from misc import (
+from mathutils import (
     _prettyprint_xyz,
     _normalize_columns,
     subspace_angles_deg,
@@ -50,10 +45,16 @@ from forward_comp import (
     _node_to_source_index,
     _hemi_slice,
 )
-from viz import _montage_pysurfer_brain_plots, _montage_mlab_trimesh
+from viz import (
+    _montage_pysurfer_brain_plots,
+    _montage_mlab_trimesh,
+    _mlab_quiver3d,
+    _mlab_points3d,
+    _mlab_trimesh,
+    _make_array_tri,
+)
 
-
-_ipython_setup(enable_reload=True)
+_ipython_setup()
 plt.rcParams['figure.dpi'] = 150
 
 homedir = Path.home()

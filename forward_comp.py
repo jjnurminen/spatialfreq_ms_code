@@ -15,7 +15,7 @@ import scipy
 import copy
 from functools import reduce
 
-from misc import _rot_around_axis_mat
+from mathutils import _rot_around_axis_mat
 
 
 def _info_meg_locs(info):

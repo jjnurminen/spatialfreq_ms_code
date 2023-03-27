@@ -60,6 +60,5 @@ dependencies:
 - mamba
 - pip:
   - trimesh
-  - https://github.com/andreyzhd/MEGSim/archive/master.zip
 
 

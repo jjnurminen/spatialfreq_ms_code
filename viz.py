@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Misc visualization.
+Visualization utils.
 
 @author: jussi
 """
@@ -9,8 +9,91 @@ Misc visualization.
 import numpy as np
 from mayavi import mlab
 from surfer import Brain
-from megsimutils.fileutils import _named_tempfile, _montage_figs
-from megsimutils.viz import _mlab_points3d, _mlab_trimesh
+import mne
+from mne.transforms import _cart_to_sph, _pol_to_cart, apply_trans
+from mne.io.constants import FIFF
+from scipy.spatial import Delaunay
+
+from miscutils import _named_tempfile, _montage_figs
+
+def _info_meg_locs(info):
+    """Return sensor locations for MEG sensors"""
+    return np.array(
+        [
+            info['chs'][k]['loc'][:3]
+            for k in range(info['nchan'])
+            if info['chs'][k]['kind'] == FIFF.FIFFV_MEG_CH
+        ]
+    )
+
+
+def _delaunay_tri(rr):
+    """Surface triangularization based on 2D proj and Delaunay"""
+    # this is a straightforward projection to xy plane
+    com = rr.mean(axis=0)
+    rr = rr - com
+    xy = _pol_to_cart(_cart_to_sph(rr)[:, 1:][:, ::-1])
+    # do Delaunay for the projection and hope for the best
+    return Delaunay(xy).simplices
+
+
+def _get_plotting_inds(info):
+    """Get magnetometer inds only, if they exist. Otherwise, get gradiometer inds."""
+    mag_inds = mne.pick_types(info, meg='mag')
+    grad_inds = mne.pick_types(info, meg='grad')
+    # if mags exist, use only them
+    if mag_inds.size:
+        inds = mag_inds
+    elif grad_inds.size:
+        inds = grad_inds
+    else:
+        raise RuntimeError('no MEG sensors found')
+    return inds
+
+
+def _make_array_tri(info, to_headcoords=True):
+    """Make triangulation of array for topography views.
+    If array has both mags and grads, triangulation will be based on mags
+    only. Corresponding sensor indices are returned as inds.
+    If to_headcoords, returns the sensor locations in head coordinates."""
+    inds = _get_plotting_inds(info)
+    locs = _info_meg_locs(info)[inds, :]
+    if to_headcoords:
+        locs = apply_trans(info['dev_head_t'], locs)
+    locs_tri = _delaunay_tri(locs)
+    return inds, locs, locs_tri
+
+
+def _mlab_quiver3d(rr, nn, **kwargs):
+    """Plots vector field as arrows.
+    rr : (N x 3) array-like
+        The locations of the vectors.
+    nn : (N x 3) array-like
+        The vectors.
+    """
+    vx, vy, vz = rr.T
+    u, v, w = nn.T
+    return mlab.quiver3d(vx, vy, vz, u, v, w, **kwargs)
+
+
+def _mlab_points3d(rr, *args, **kwargs):
+    """Plots points.
+    rr : (N x 3) array-like
+        The locations of the vectors.
+    Note that the api to mayavi points3d is weird, there is no way to specify colors and sizes
+    individually. See:
+    https://stackoverflow.com/questions/22253298/mayavi-points3d-with-different-size-and-colors
+    """
+    vx, vy, vz = rr.T
+    return mlab.points3d(vx, vy, vz, *args, **kwargs)
+
+
+def _mlab_trimesh(pts, tris, **kwargs):
+    """Plots trimesh specified by pts and tris into given figure.
+    pts : (N x 3) array-like
+    """
+    x, y, z = pts.T
+    return mlab.triangular_mesh(x, y, z, tris, **kwargs)
 
 
 def _montage_pysurfer_brain_plots(
@@ -147,88 +230,6 @@ def _montage_pysurfer_brain_plots(
     _montage_figs(fignames, fn_out, ncols_max=ncols_max)
 
 
-def _montage_mlab_brain_plots(
-    src_datas,
-    titles,
-    src_coords,
-    fn_out,
-    frange=None,
-    ncols_max=None,
-):
-    """Montage several mlab-based cortical plots into a .png file.
-
-    XXX: COLORMAP SCALING IS STILL BROKEN!
-
-    src_datas : list of source-based scalar data arrays
-    titles : corresponding figure titles
-    frange : tuple of (fmin, fmax), min and max values for scaling the colormap
-    src_coords : indices of source vertices
-    hemi : hemisphere to plot ('lh' or 'rh')
-    ncols_max : max. n of columns in montaged figure
-    """
-    FIG_BG_COLOR = (0.3, 0.3, 0.3)
-    FIGSIZE = (400, 300)
-    pt_scale = 0.003
-    if ncols_max is None:
-        ncols_max = 4
-    mlab.options.offscreen = True
-    fignames = list()
-
-    nfigs = len(src_datas)
-
-    # scale the data
-    # mlab (apparently) allocates the colormap for values between -1 and 1
-    # if autoscaling, the data will be scaled to that range,
-    # otherwise according to fmin, fmax (so data may saturate)
-    if frange is not None:
-        fmin, fmax = frange
-    else:  # autoscale
-        fmin, fmax = None, None
-        for src_data in src_datas:
-            if fmax is None or src_data.max() > fmax:
-                fmax = src_data.max()
-            if fmin is None or src_data.min() < fmin:
-                fmin = src_data.min()
-    print(f'{fmin=}')
-    print(f'{fmax=}')
-
-    src_datas_scaled = list()
-    for _src_data in src_datas:
-        src_data = _src_data.copy()
-        src_data -= src_data.min()  # 0 -> max
-        src_data /= 0.5 * (fmax - fmin)  # 0 -> 2
-        src_data -= 1  # -1 -> 1
-        src_datas_scaled.append(src_data)
-
-    for src_data, title, idx in zip(src_datas_scaled, titles, range(nfigs)):
-        fig = mlab.figure(bgcolor=FIG_BG_COLOR)
-        nodes = _mlab_points3d(src_coords, figure=fig, scale_factor=pt_scale)
-        nodes.glyph.scale_mode = 'scale_by_vector'
-        nodes.mlab_source.dataset.point_data.scalars = src_data
-        mlab.title(title)
-        mlab.view(170, 50, roll=60)  # lateral view
-        # save fig for the montage
-        fname = _named_tempfile(suffix='.png')
-        print(f'creating figure {idx}/{nfigs}')
-        mlab.savefig(fname, size=FIGSIZE, figure=fig)
-        fignames.append(fname)
-        mlab.close(fig)
-
-    # complete the montage using empty figures, so that the background is
-    # consistent
-    n_last = ncols_max - nfigs % ncols_max
-    if n_last == ncols_max:
-        n_last = 0
-    for k in range(n_last):
-        fig = mlab.figure(bgcolor=FIG_BG_COLOR)
-        fname = _named_tempfile(suffix='.png')
-        mlab.savefig(fname, size=FIGSIZE, figure=fig)
-        fignames.append(fname)
-
-    mlab.options.offscreen = False  # restore
-    _montage_figs(fignames, fn_out, ncols_max=ncols_max)
-    return src_datas_scaled
-
 
 def _montage_mlab_trimesh(
     locs, tri, src_datas, titles, fn_out, ncols_max=None, distance=None
@@ -277,23 +278,3 @@ def _montage_mlab_trimesh(
     mlab.options.offscreen = False  # restore
     _montage_figs(fignames, fn_out, ncols_max=ncols_max)
 
-
-def _rescale_brain_colormap(
-    brain, src_color_data, fmin=None, fmax=None, fmin_quantile=None, fmax_quantile=None
-):
-    """Scale color data of FreeSurfer brain object according to min/max values.
-
-    For fmin and fmax, either absolute values or quantiles can be given.
-    """
-    if fmin is None:
-        if fmin_quantile is None:
-            fmin_quantile = 0.05
-        fmin = np.quantile(src_color_data, fmin_quantile, axis=None)
-    if fmax is None:
-        if fmax_quantile is None:
-            fmax_quantile = 0.95
-        fmax = np.quantile(src_color_data, fmax_quantile, axis=None)
-    fmid = (fmin + fmax) / 2
-    brain.scale_data_colormap(
-        fmin=fmin, fmid=fmid, fmax=fmax, transparent=False, verbose=False
-    )
