@@ -1,5 +1,9 @@
 
-## Instructions for use
+## Introduction
+
+This repository contains simulation code from the paper Nurminen et al (2023). The code is written in Python.
+
+## Running the code
 
 - Create and activate a suitable Python environment
     - Easiest way is to download `environment.yml` from the package root and run `conda env create`
