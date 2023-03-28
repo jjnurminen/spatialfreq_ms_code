@@ -53,22 +53,19 @@ from viz import (
     _mlab_trimesh,
     _make_array_tri,
 )
+from paths import DATA_PATH
+
 
 _ipython_setup()
 plt.rcParams['figure.dpi'] = 150
+assert DATA_PATH.is_dir()
+FIG_DIR = DATA_PATH  # where to put the generated figures
 
-homedir = Path.home()
-projectpath = homedir / 'repos/spatialfreq_ms_code'  # where the code resides
-assert projectpath.is_dir()
-figuredir = projectpath  # where to put the figures
-assert figuredir.is_dir()
-
-# adjustable parameters
 # head position shift to set headpos (independent of source shift)
 HEAD_SHIFT = np.array([0, -0e-2, -0e-2])
 # whether to replace default sensor data (306-ch) with a new geometry
-LOAD_ALTERNATE_ARRAY = True
-if LOAD_ALTERNATE_ARRAY:
+LOAD_SENSOR_DATA = True
+if LOAD_SENSOR_DATA:
     alt_array_name = Path('RADIAL_N1000_R120mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
 else:
     alt_array_name = None
@@ -127,10 +124,10 @@ subject = 'sample'
 
 print('\n')
 
-if LOAD_ALTERNATE_ARRAY:
+if LOAD_SENSOR_DATA:
     print(f'using saved array: {alt_array_name}')
     array_name = alt_array_name.stem  # name without extension
-    with open(projectpath / alt_array_name, 'rb') as f:
+    with open(DATA_PATH / alt_array_name, 'rb') as f:
         info = pickle.load(f)
 else:
     array_name = 'VV-306'
@@ -575,7 +572,7 @@ for _lambda in lambdas:
 
 # %% MS FIG 4:
 # plot SD vs lambda/L - separate plots
-outfn = figuredir / 'mean_PSF_SD_vs_L_and_lambda.png'
+outfn = FIG_DIR / 'mean_PSF_SD_vs_L_and_lambda.png'
 Lvals = list(range(1, LIN + 1))
 REDUCER_FUN = np.mean
 YLABEL = 'Mean PSF spatial dispersion (mm)'
@@ -610,7 +607,7 @@ N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13
 SURF = 'inflated'
-outfn = figuredir / f'dispersion_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
+outfn = FIG_DIR / f'dispersion_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
 # restrict dispersion to current hemi
 sds_thishemi = [sd[HEMI_SLICE] for sd in sds.values()]
 titles = list()
@@ -670,7 +667,7 @@ if not FIX_ORI:
     SRC_IND = SRC_IND[1]  # pick a single orientation
 NCOLS_MAX = 4
 outfn = (
-    figuredir
+    FIG_DIR
     / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
 )
 
@@ -734,7 +731,7 @@ if not FIX_ORI:
     SRC_IND = SRC_IND[1]  # pick a single orientation
 NCOLS_MAX = 4
 outfn = (
-    figuredir
+    FIG_DIR
     / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
 )
 
@@ -781,7 +778,7 @@ _montage_pysurfer_brain_plots(
 # %% MS FIG 5:
 # plot lead field SVD vectors on array trimesh
 #
-outfn = figuredir / 'svd_basis_trimesh.png'
+outfn = FIG_DIR / 'svd_basis_trimesh.png'
 
 U, Sigma, V = np.linalg.svd(leads_all_sc)
 
@@ -794,14 +791,14 @@ for k in range(20):
     title = f'k={k+1}'.ljust(6)
     titles.append(title)
 _montage_mlab_trimesh(
-    locs, tri, src_datas, titles, figuredir, ncols_max=5, distance=0.5
+    locs, tri, src_datas, titles, FIG_DIR, ncols_max=5, distance=0.5
 )
 
 
 # %% MS FIG 6:
 # plot some VSHs on array trimesh
 #
-outfn = figuredir / 'vsh_basis_trimesh.png'
+outfn = FIG_DIR / 'vsh_basis_trimesh.png'
 
 inds, locs, tri = _make_array_tri(info)
 
@@ -822,7 +819,7 @@ _montage_mlab_trimesh(
 # L-dependent MNP solution with noise.
 # Pick a single source from the leadfield matrix, add noise and do MNP in the multipole domain.
 
-outfn = figuredir / 'inverse_vs_SNR.png'
+outfn = FIG_DIR / 'inverse_vs_SNR.png'
 
 REGU_METHOD = 'tikhonov'
 # in literature, values of ~1e-5 to ~1e-11 have been considered; 1e-8 is reasonable

@@ -6,11 +6,11 @@ Misc utilities.
 """
 from pathlib import Path
 import subprocess
-import platform
 import os
 import tempfile
 import numpy as np
-import IPython
+
+from paths import MONTAGE_PATH
 
 
 def _named_tempfile(suffix=None):
@@ -32,14 +32,10 @@ def _montage_figs(fignames, montage_fn, ncols_max=None):
     montage_fn is the resulting montage name.
     ncols_max defines max number of columns for the montage.
     """
+    global MONTAGE_PATH
     if ncols_max is None:
         ncols_max = 4
-    # educated guess for the location of the montage binary
-    if platform.system() == 'Linux':
-        MONTAGE_CMD = '/usr/bin/montage'
-    else:
-        MONTAGE_CMD = 'C:/Program Files/ImageMagick-7.0.10-Q16/montage.exe'
-    if not Path(MONTAGE_CMD).exists():
+    if not Path(MONTAGE_PATH).exists():
         raise RuntimeError('montage binary not found, cannot montage files')
     # set montage geometry
     nfigs = len(fignames)
@@ -48,7 +44,7 @@ def _montage_figs(fignames, montage_fn, ncols_max=None):
     geom_str = f'{geom_cols}x{geom_rows}'
     MONTAGE_ARGS = ['-geometry', '+0+0', '-tile', geom_str]
     # compose a list of arguments
-    theargs = [MONTAGE_CMD] + MONTAGE_ARGS + fignames + [montage_fn]
+    theargs = [MONTAGE_PATH] + MONTAGE_ARGS + fignames + [montage_fn]
     print('running montage command %s' % ' '.join(theargs))
     subprocess.call(theargs)  # use call() to wait for completion
 
