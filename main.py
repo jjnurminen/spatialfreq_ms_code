@@ -7,6 +7,7 @@ Simulation code for XXX
 @author: jussi
 """
 
+
 # %% INITIALIZE
 
 from pathlib import Path
@@ -168,7 +169,8 @@ hemi_to_ind = {'lh': 0, 'rh': 1}
 HEMI_IND = hemi_to_ind[HEMI]
 
 
-# %% SOURCE spaces and forward computations
+# %% DEFINE source spaces and forward computations.
+#
 # If the solution is unconstrained (FIX_ORI=False), the leadfield and the
 # src_normal matrix will have 3*Nsrc elements due to the 3 orthogonal dipoles at
 # each source location. The number of source locations (src_coords) remains the same.
@@ -246,48 +248,6 @@ leads_thishemi = leads[HEMI_IND]
 leads_thishemi_sc = leads_sc[HEMI_IND]  # leadfield for this hemi
 lead_norms_thishemi = np.linalg.norm(leads_thishemi, axis=0)
 
-# define some source nodes for testing
-try:
-    test_nodes = dict()
-    # these sources are near the midline (small x)
-    test_nodes['superficial_z'] = _find_points_in_range(
-        node_coords_thishemi, ((-0.02, 0.02), (0.015, 0.025), (0.12, 0.14))
-    )[0]
-    test_nodes['deep_z'] = _find_points_in_range(
-        node_coords_thishemi, ((-0.02, 0.02), (0.015, 0.025), (0.06, 0.065))
-    )[0]
-    test_nodes['midrange_z'] = _find_points_in_range(
-        node_coords_thishemi, ((-0.02, 0.02), (0.015, 0.025), (0.08, 0.09))
-    )[0]
-    # lateral source (NB: specific to left hemi!)
-    test_nodes['lateral'] = _find_points_in_range(
-        node_coords_thishemi, ((-0.06, -0.05), (0.015, 0.025), (0.06, 0.065))
-    )[0]
-except IndexError:
-    print('warning: some test nodes were not found')
-
-if FIX_ORI:
-    test_sources = {
-        key: _unit_impulse(nsrc_valid_thishemi, node)
-        for key, node in test_nodes.items()
-    }
-else:
-    test_sources = dict()
-    # generic (1,1,1) vector for all sources
-    for key in test_nodes:
-        SRC_IND = (
-            3 * test_nodes[key]
-        )  # since we have 3 orientation elements for each node
-        srcvec = np.zeros(nsrc_valid_thishemi)
-        # set some specific orientations
-        if key == 'superficial_z':
-            srcvec[SRC_IND : SRC_IND + 3] = np.array(
-                [-0.14288205, -0.8898686, 0.43326493]
-            )
-        else:
-            srcvec[SRC_IND : SRC_IND + 3] = 1
-        test_sources[key] = srcvec
-
 #  distance matrix
 if FIX_ORI:
     src_dij_thishemi = scipy.spatial.distance_matrix(
@@ -305,7 +265,8 @@ else:
     # XXX: src_dij_all is not computed for free ori
 
 
-# %% SSS basis
+# %% COMPUTE multipole basis, multipole-based leadfields etc.
+#
 # NB: magnetometers are scaled by factor of MAG_SCALING in the basis
 # some heuristics for the basis dimension and origin
 _array_name = str(array_name).lower()
@@ -359,7 +320,8 @@ node_coords_thishemi_dev = apply_trans(head_dev_trans, node_coords_thishemi)
 node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1)
 
 
-# %% compute resolution kernel, spatial dispersion and focality for multipole leadfields
+# %% COMPUTE resolution kernel and spatial dispersion.
+#
 sds = dict()
 xin_res_kernels = dict()
 #
@@ -418,8 +380,8 @@ for _lambda in lambdas:
     sds_lambda[_lambda] = _spatial_dispersion(res_kernel, src_dij_all)
 
 
-# %% MS FIG 4:
-# plot SD vs lambda/L - separate plots
+# %% FIGURE 4: Plot spatial dispersion vs lambda and L.
+
 outfn = FIG_DIR / 'mean_PSF_SD_vs_L_and_lambda.png'
 Lvals = list(range(1, LIN + 1))
 REDUCER_FUN = np.mean
@@ -449,8 +411,8 @@ plt.tight_layout()
 plt.savefig(outfn)
 
 
-# %% MS FIG 2:
-# PySurfer plot of PSF spatial dispersion as function of Lin
+# %% FIGURE 2: plot PSF spatial dispersion as function of Lin.
+#
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13
@@ -474,7 +436,7 @@ for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
 src_data = sds_sensor[HEMI_SLICE]
 # scalarize and convert m->mm
 src_data = 1e3 * _scalarize_src_data(src_data, nverts_thishemi, reducer_fun=np.mean)
-title = f'sensor'
+title = 'sensor'
 src_datas.append(src_data)
 titles.append(title)
 
@@ -496,8 +458,7 @@ _montage_pysurfer_brain_plots(
 )
 
 
-# %% MS FIG 1:
-# PySurfer plot of a single source PSF as function of Lin, no regularization
+# %% FIGURE 1: plot single source PSF as function of Lin, no regularization.
 #
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
@@ -558,9 +519,8 @@ _montage_pysurfer_brain_plots(
 )
 
 
-# %% MS FIG 3:
-# PySurfer plot of a single source PSF as function of Lin, regularization with lambda = 1e-8
-# WIP: check that sensor-based result is correct!
+# %% FIGURE 3: plot single source PSF as function of Lin, regularization with lambda = 1e-8
+# XXX: check that sensor-based result is correct!
 #
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
@@ -568,11 +528,8 @@ MAX_LIN = 13  # max LIN value to use
 COLOR_THRES = None  # don't show colors below given value
 SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
 # NOTE: source indices are global (index the complete leadfield, not a hemi)
-# ind = 1480  # old one, not very focal
 SRC_IND = REPR_SOURCE
 SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
-# frange = 0, .05  # global fixed
-frange = None  # global auto
 frange = 'separate'  # individual auto
 if not FIX_ORI:
     SRC_IND = SRC_IND[1]  # pick a single orientation
@@ -622,8 +579,7 @@ _montage_pysurfer_brain_plots(
 )
 
 
-# %% MS FIG 5:
-# plot lead field SVD vectors on array trimesh
+# %% FIGURE 5: plot lead field SVD vectors on array trimesh.
 #
 outfn = FIG_DIR / 'svd_basis_trimesh.png'
 
@@ -640,8 +596,7 @@ for k in range(20):
 _montage_mlab_trimesh(locs, tri, src_datas, titles, FIG_DIR, ncols_max=5, distance=0.5)
 
 
-# %% MS FIG 6:
-# plot some VSHs on array trimesh
+# %% FIGURE 6:  plot some VSHs on array trimesh.
 #
 outfn = FIG_DIR / 'vsh_basis_trimesh.png'
 
@@ -658,9 +613,10 @@ for ind in range(20):
 _montage_mlab_trimesh(locs, tri, src_datas, titles, outfn, ncols_max=5, distance=0.5)
 
 
-# %% MS FIG 7:
-# L-dependent MNP solution with noise.
-# Pick a single source from the leadfield matrix, add noise and do MNP in the multipole domain.
+# %% FIGURE 7: L-dependent MNP solution with noise.
+#
+# Pick a single source from the leadfield matrix, add noise and do MNP in the
+# multipole domain.
 
 outfn = FIG_DIR / 'inverse_vs_SNR.png'
 
@@ -676,7 +632,6 @@ SNR_VALS = [1, 2, 5, 10]
 LIN_VALS = [6, 7, 8, 9]
 NCOLS_MAX = len(LIN_VALS)
 frange = 'separate'  # individual auto
-# frange = None
 SRC_IND = REPR_SOURCE
 DO_COLORBAR = False
 
