@@ -127,7 +127,7 @@ else:
 if SENSOR_TYPE != 'all':
     print(f'*** restricting to MEG sensor type: {SENSOR_TYPE}')
 
-print('using mag scaling: %g' % MAG_SCALING)
+print(f'using mag scaling: {MAG_SCALING:g}')
 
 # do the head translation
 if np.any(HEAD_SHIFT):
@@ -297,19 +297,19 @@ Sout = S[:, nin:]
 # this can be set to optimize basis by dropping certain basis vectors
 Sin_drop_inds = list()
 
-print('basis dim: Lin=%d Lout=%d' % (LIN, LOUT))
+print(f'basis dim: Lin={int(LIN)} Lout={int(LOUT)}')
 with np.printoptions(precision=3):
-    print('subspace angles Sin vs Sout: %s' % subspace_angles_deg(Sin, Sout))
-print('condition of S: %g' % np.linalg.cond(S))
-print('condition of Sin: %g' % np.linalg.cond(Sin))
+    print(f'subspace angles Sin vs Sout: {subspace_angles_deg(Sin, Sout)}')
+print(f'condition of S: {np.linalg.cond(S):g}')
+print(f'condition of Sin: {np.linalg.cond(Sin):g}')
 
 # compute L for each matrix element
 basisvec_L = np.array([_idx_deg_ord(k)[0] for k in range(nin)])
 
 # corresponding multipole-based leadfield
 xin_leads_all = np.squeeze(np.linalg.pinv(Sin) @ leads_all_sc)
-print('condition of leadfield: %g' % np.linalg.cond(leads_all_sc))
-print('condition of multipole-based leadfield: %g' % np.linalg.cond(xin_leads_all))
+print(f'condition of leadfield: {np.linalg.cond(leads_all_sc):g}')
+print(f'condition of multipole-based leadfield: {np.linalg.cond(xin_leads_all):g}')
 
 # source node distances to SSS origin
 head_dev_trans = invert_transform(info['dev_head_t'])

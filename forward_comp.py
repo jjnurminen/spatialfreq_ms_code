@@ -47,7 +47,7 @@ def _sensordata_to_ch_dicts(Sc, Sn, Iprot, coiltypes):
         ch = dict()
         number = k + 1
         ch['loc'] = loc
-        ch['ch_name'] = 'MYMEG %d' % number
+        ch['ch_name'] = f'MYMEG {int(number)}'
         ch['coil_type'] = coiltype
         ch['coord_frame'] = FIFF.FIFFV_COORD_DEVICE
         ch['kind'] = FIFF.FIFFV_MEG_CH

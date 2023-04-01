@@ -45,7 +45,7 @@ def _montage_figs(fignames, montage_fn, ncols_max=None):
     # compose a list of arguments
     montage_fn = str(montage_fn)  # so we can accept pathlib args too
     theargs = [MONTAGE_PATH] + MONTAGE_ARGS + fignames + [montage_fn]
-    print('running montage command %s' % ' '.join(theargs))
+    print(f"running montage command {' '.join(theargs)}")
     subprocess.call(theargs)  # use call() to wait for completion
 
 
