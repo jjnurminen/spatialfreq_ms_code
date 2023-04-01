@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Simulation code for XXX et al: XXX
-
+XXX: fill in comments
+Simulation code for XXX
 
 @author: jussi
 """
 
 # %% INITIALIZE
-import mne
-from mne.io.constants import FIFF
-import numpy as np
-from mayavi import mlab
-from surfer import Brain
-from mne.transforms import invert_transform, apply_trans
-from mne.preprocessing.maxwell import _sss_basis_basic, _prep_mf_coils
-from mne.forward import _create_meg_coils
-import matplotlib.pyplot as plt
+
 from pathlib import Path
 import pickle
 import scipy
-import trimesh
+import numpy as np
+import matplotlib.pyplot as plt
+
+import mne
+from mne.transforms import invert_transform, apply_trans
+from mne.preprocessing.maxwell import _sss_basis_basic
+from mne.forward import _create_meg_coils
+
 
 from miscutils import _ipython_setup
 
@@ -48,9 +47,6 @@ from forward_comp import (
 from viz import (
     _montage_pysurfer_brain_plots,
     _montage_mlab_trimesh,
-    _mlab_quiver3d,
-    _mlab_points3d,
-    _mlab_trimesh,
     _make_array_tri,
 )
 from paths import DATA_PATH
@@ -63,12 +59,9 @@ FIG_DIR = DATA_PATH  # where to put the generated figures
 
 # head position shift to set headpos (independent of source shift)
 HEAD_SHIFT = np.array([0, -0e-2, -0e-2])
-# whether to replace default sensor data (306-ch) with a new geometry
-LOAD_SENSOR_DATA = True
-if LOAD_SENSOR_DATA:
-    alt_array_name = Path('RADIAL_N1000_R120mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
-else:
-    alt_array_name = None
+# to use the default sensor data (Vectorview 306-ch), supply None
+# otherwise give a filename for a new sensor file
+LOAD_ARRAY_DATA = Path('RADIAL_N1000_R120mm_coverage4.0pi_POINT_MAGNETOMETER.dat')
 
 # restrict to gradiometers or magnetometers
 SENSOR_TYPE = 'all'
@@ -124,10 +117,10 @@ subject = 'sample'
 
 print('\n')
 
-if LOAD_SENSOR_DATA:
-    print(f'using saved array: {alt_array_name}')
-    array_name = alt_array_name.stem  # name without extension
-    with open(DATA_PATH / alt_array_name, 'rb') as f:
+if LOAD_ARRAY_DATA is not None:
+    print(f'using saved array: {LOAD_ARRAY_DATA}')
+    array_name = LOAD_ARRAY_DATA.stem  # name without extension
+    with open(DATA_PATH / LOAD_ARRAY_DATA, 'rb') as f:
         info = pickle.load(f)
 else:
     array_name = 'VV-306'
@@ -438,7 +431,7 @@ ax1.semilogx(
     [1e3 * REDUCER_FUN(sds_lambda[l][:]) for l in lambdas],
     label='sensor-based',
 )
-ax1.set_xlabel('$\lambda$ (sensor-based inverse)')
+ax1.set_xlabel(r'$\lambda$ (sensor-based inverse)')
 fig.supylabel(YLABEL)
 # ax1.set_ylim((25, 80))
 ax1.set_yticks(YTICKS)
@@ -512,7 +505,6 @@ MAX_LIN = 13  # max LIN value to use
 COLOR_THRES = None  # don't show colors below given value
 SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
 # NOTE: source indices are global (index the complete leadfield, not a hemi)
-# ind = 1480  # old one, not very focal
 SRC_IND = REPR_SOURCE
 SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
 # frange = 0, .05  # global fixed

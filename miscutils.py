@@ -32,7 +32,6 @@ def _montage_figs(fignames, montage_fn, ncols_max=None):
     montage_fn is the resulting montage name.
     ncols_max defines max number of columns for the montage.
     """
-    global MONTAGE_PATH
     if ncols_max is None:
         ncols_max = 4
     if not Path(MONTAGE_PATH).exists():
