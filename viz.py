@@ -155,8 +155,6 @@ def _montage_pysurfer_brain_plots(
     colorbar_fontsize = int(FIGSIZE[0] / 16)  # heuristic
 
     nfigs = len(src_datas)
-    y_height = int(nfigs / ncols_max) * FIGSIZE[1]  # total y height
-    title_size = y_height / 120  # what's the unit?
 
     if frange is None:
         fmax, fmin = np.max(src_datas), np.min(src_datas)
@@ -220,7 +218,7 @@ def _montage_pysurfer_brain_plots(
     # do not fill first row, if it's the only one
     if n_last == ncols_max or nfigs < ncols_max:
         n_last = 0
-    for k in range(n_last):
+    for _ in range(n_last):
         fig = mlab.figure(bgcolor=FIG_BG_COLOR)
         fname = _named_tempfile(suffix='.png')
         mlab.savefig(fname, size=FIGSIZE, figure=fig)
@@ -268,7 +266,7 @@ def _montage_mlab_trimesh(
     n_last = ncols_max - nfigs % ncols_max
     if n_last == ncols_max:
         n_last = 0
-    for k in range(n_last):
+    for _ in range(n_last):
         fig = mlab.figure(bgcolor=FIG_BG_COLOR)
         fname = _named_tempfile(suffix='.png')
         mlab.savefig(fname, size=FIGSIZE, figure=fig)

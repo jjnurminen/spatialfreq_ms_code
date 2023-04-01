@@ -286,9 +286,9 @@ def _idx_deg_ord(idx):
     """Returns (degree, order) tuple for a given multipole index."""
     # this is just an ugly inverse of _deg_ord_idx, do not expect speed
     for deg in range(1, 60):
-        for ord in range(-deg, deg + 1):
-            if _deg_ord_idx(deg, ord) == idx:
-                return deg, ord
+        for order in range(-deg, deg + 1):
+            if _deg_ord_idx(deg, order) == idx:
+                return deg, order
     return None
 
 
