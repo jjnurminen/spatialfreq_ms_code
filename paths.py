@@ -16,5 +16,3 @@ if platform.system() == 'Linux':
     MONTAGE_PATH = '/usr/bin/montage'
 else:
     MONTAGE_PATH = 'C:/Program Files/ImageMagick-7.0.10-Q16/montage.exe'
-
-

@@ -645,9 +645,7 @@ for k in range(20):
     src_datas.append(U[:, k])
     title = f'k={k+1}'.ljust(6)
     titles.append(title)
-_montage_mlab_trimesh(
-    locs, tri, src_datas, titles, FIG_DIR, ncols_max=5, distance=0.5
-)
+_montage_mlab_trimesh(locs, tri, src_datas, titles, FIG_DIR, ncols_max=5, distance=0.5)
 
 
 # %% MS FIG 6:
@@ -665,9 +663,7 @@ for ind in range(20):
     # title = f'{L=}, {m=}'
     title = f'({L}, {m})'
     titles.append(title)
-_montage_mlab_trimesh(
-    locs, tri, src_datas, titles, outfn, ncols_max=5, distance=0.5
-)
+_montage_mlab_trimesh(locs, tri, src_datas, titles, outfn, ncols_max=5, distance=0.5)
 
 
 # %% MS FIG 7:

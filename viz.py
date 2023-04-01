@@ -16,6 +16,7 @@ from scipy.spatial import Delaunay
 
 from miscutils import _named_tempfile, _montage_figs
 
+
 def _info_meg_locs(info):
     """Return sensor locations for MEG sensors"""
     return np.array(
@@ -229,7 +230,6 @@ def _montage_pysurfer_brain_plots(
     _montage_figs(fignames, fn_out, ncols_max=ncols_max)
 
 
-
 def _montage_mlab_trimesh(
     locs, tri, src_datas, titles, fn_out, ncols_max=None, distance=None
 ):
@@ -276,4 +276,3 @@ def _montage_mlab_trimesh(
 
     mlab.options.offscreen = False  # restore
     _montage_figs(fignames, fn_out, ncols_max=ncols_max)
-

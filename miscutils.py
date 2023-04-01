@@ -50,7 +50,6 @@ def _montage_figs(fignames, montage_fn, ncols_max=None):
     subprocess.call(theargs)  # use call() to wait for completion
 
 
-
 def _ipython_setup(enable_reload=False):
     """Set up some IPython parameters, if we're running in IPython"""
     try:
@@ -61,8 +60,7 @@ def _ipython_setup(enable_reload=False):
 
     ip = get_ipython()
     ip.magic("gui qt5")  # needed for mayavi plots
-    #ip.magic("matplotlib qt")  # do mpl plots in separate windows
+    # ip.magic("matplotlib qt")  # do mpl plots in separate windows
     if enable_reload:
         ip.magic("reload_ext autoreload")  # these will enable module autoreloading
         ip.magic("autoreload 2")
-
