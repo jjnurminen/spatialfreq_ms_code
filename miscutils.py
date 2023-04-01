@@ -44,6 +44,7 @@ def _montage_figs(fignames, montage_fn, ncols_max=None):
     geom_str = f'{geom_cols}x{geom_rows}'
     MONTAGE_ARGS = ['-geometry', '+0+0', '-tile', geom_str]
     # compose a list of arguments
+    montage_fn = str(montage_fn)  # so we can accept pathlib args too
     theargs = [MONTAGE_PATH] + MONTAGE_ARGS + fignames + [montage_fn]
     print('running montage command %s' % ' '.join(theargs))
     subprocess.call(theargs)  # use call() to wait for completion
