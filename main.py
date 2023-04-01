@@ -21,15 +21,12 @@ from mne.transforms import invert_transform, apply_trans
 from mne.preprocessing.maxwell import _sss_basis_basic
 from mne.forward import _create_meg_coils
 
-
 from miscutils import _ipython_setup
 
 from mathutils import (
     _prettyprint_xyz,
     _normalize_columns,
     subspace_angles_deg,
-    _find_points_in_range,
-    _unit_impulse,
 )
 from forward_comp import (
     _split_leadfield,

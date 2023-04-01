@@ -30,16 +30,6 @@ def _vector_angles(V, W):
     dots = np.clip(dots, -1, 1)
     return np.arccos(dots) / np.pi * 180
 
-
-def _mpl_plot3d(rr):
-    from mpl_toolkits import mplot3d
-
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    ax.plot3D(rr[:, 0], rr[:, 1], rr[:, 2], 'o')
-    # ax.set_aspect('equal')
-
-
 def subspace_angles_deg(A, B):
     """Return subspace angles in degrees"""
     return subspace_angles(A, B) / np.pi * 180
@@ -54,19 +44,6 @@ def _random_unit(N):
     """Return random unit vector in N-dimensional space"""
     v = np.random.randn(N)
     return v / np.linalg.norm(v)
-
-
-def _find_points_in_range(pts, range):
-    """Finds points in pts (Npts x 3) within given x, y, and z ranges
-    Range should be a 3-tuple of (min, max), each in (x, y, z) dims
-    or (None, None) if that dim does not matter
-    """
-    total_mask = np.ones(pts.shape[0], dtype=bool)
-    for dim, (dim_min, dim_max) in enumerate(range):
-        if dim_min is not None and dim_max is not None:
-            dim_mask = np.logical_and(pts[:, dim] <= dim_max, pts[:, dim] >= dim_min)
-            total_mask = np.logical_and(dim_mask, total_mask)
-    return np.where(total_mask)[0]
 
 
 def _rotate_to(v1, v2):
@@ -144,14 +121,6 @@ def _spherepts_golden(N, angle=4 * np.pi):
     r = np.sqrt(1 - z**2)
     # this looks like the usual cylindrical -> Cartesian transform?
     return np.column_stack((r * np.cos(longs), r * np.sin(longs), z))
-
-
-def _unit_impulse(N, n):
-    """Return N-sample unit impulse that is 1 at index n"""
-    z = np.zeros(N)
-    z[n] = 1
-    return z
-
 
 def _moore_penrose_pseudoinverse(L):
     """Naive Moore-Penrose pseudoinverse (without regularization)"""
