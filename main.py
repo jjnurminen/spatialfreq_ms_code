@@ -259,7 +259,7 @@ else:
     src_dij_thishemi = scipy.spatial.distance_matrix(
         node_coords_thishemi_redundant, node_coords_thishemi_redundant
     )
-    # XXX: src_dij_all is not computed for free ori
+    # XXX: src_dij_all is not yet computed for free ori
 
 
 # %% COMPUTE multipole basis, multipole-based leadfields etc.
@@ -336,6 +336,7 @@ RES_RCOND = 1e-15  # rcond if regularizing with pinv
 RES_TIKHONOV_LAMBDA = 1e-8  # Tikhonov lambda, if regularizing with Tikhonov
 xin_lead_conds = list()
 xin_leads = list()
+print('computing multipole-based resolution kernels...')
 for L in range(1, LIN + 1):
     theLs = list(range(1, L + 1))
     # the component indices to include
@@ -356,9 +357,9 @@ for L in range(1, LIN + 1):
     )
     xin_res_kernels[L] = res_kernel
     sds[L] = _spatial_dispersion(res_kernel, src_dij_all)
-    print(f'{sds[L][REPR_SOURCE]:2f}')
 
-# compute resolution kernel, spatial dispersion and focality for sensor-based leadfield
+# compute resolution kernel and spatial dispersion for sensor-based leadfield
+print('computing sensor-based resolution kernel...')
 res_kernel = _resolution_kernel(
     leads_all_sc,
     method=RES_METHOD,
@@ -367,7 +368,9 @@ res_kernel = _resolution_kernel(
 )
 sds_sensor = _spatial_dispersion(res_kernel, src_dij_all)
 
-# spatial dispersion vs. lambda when using Tikhonov regularization for the resolution kernels
+# compute resolution kernel and spatial dispersion for sensor-based leadfield as
+# a function of Tikhonov lambda
+print('computing sensor-based resolution kernels with varying regularization...')
 sds_lambda = dict()
 lambdas = 10.0 ** np.arange(-5, -12, -1)
 for _lambda in lambdas:
@@ -392,17 +395,13 @@ ax1.semilogx(
 )
 ax1.set_xlabel(r'$\lambda$ (sensor-based inverse)')
 fig.supylabel(YLABEL)
-# ax1.set_ylim((25, 80))
 ax1.set_yticks(YTICKS)
 ax1.invert_xaxis()
-# plt.savefig('mean_PSF_SD_vs_lambda.png')
 ax2.set_xticks(Lvals)
 ax2.set_xlabel('$L$ (multipole-based inverse)')
 ax2.plot(
     Lvals, [1e3 * REDUCER_FUN(sds[L][:]) for L in Lvals], 'r', label='multipole-based'
 )
-# ax2.set_ylabel(YLABEL)
-# ax2.set_ylim((25, 80))
 ax2.set_yticks(YTICKS)
 plt.tight_layout()
 plt.savefig(outfn)
@@ -466,7 +465,6 @@ SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
 SRC_IND = REPR_SOURCE
 SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
 # frange = 0, .05  # global fixed
-frange = None  # global auto
 frange = 'separate'  # individual auto
 if not FIX_ORI:
     SRC_IND = SRC_IND[1]  # pick a single orientation
