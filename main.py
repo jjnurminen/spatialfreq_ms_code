@@ -531,7 +531,7 @@ if not FIX_ORI:
 NCOLS_MAX = 4
 outfn = (
     FIG_DIR
-    / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
+    / f'psf_cortexplot_regu_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
 )
 
 titles = list()
@@ -588,7 +588,7 @@ for k in range(20):
     src_datas.append(U[:, k])
     title = f'k={k+1}'.ljust(6)
     titles.append(title)
-_montage_mlab_trimesh(locs, tri, src_datas, titles, FIG_DIR, ncols_max=5, distance=0.5)
+_montage_mlab_trimesh(locs, tri, src_datas, titles, outfn, ncols_max=5, distance=0.5)
 
 
 # %% FIGURE 6:  plot some VSHs on array trimesh.

@@ -15,4 +15,4 @@ DATA_PATH = Path.home() / 'repos/spatialfreq_ms_code'
 if platform.system() == 'Linux':
     MONTAGE_PATH = '/usr/bin/montage'
 else:
-    MONTAGE_PATH = 'C:/Program Files/ImageMagick-7.0.10-Q16/montage.exe'
+    MONTAGE_PATH = 'C:/Program Files/ImageMagick-7.1.1-Q16-HDRI/montage.exe'
