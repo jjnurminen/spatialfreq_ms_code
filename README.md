@@ -1,11 +1,12 @@
 
 ## Introduction
 
-This repository contains simulation code from the paper Nurminen et al (2023). The code is written in Python. It heavily depends on the [mne-python](https://mne.tools/stable/index.html) library.
+This repository contains simulation code from the paper Nurminen et al (2023). The code is written in Python and should be runnable on both Windows and Linux systems.
+It heavily depends on the [mne-python](https://mne.tools/stable/index.html) library.
 
 ## Installation
 
-The dependencies are easiest to handle using the Anaconda distribution, so you should first install that. An Anaconda environment specification file `environment.yml` is included with the repository. Once you have Anaconda working, clone the repository, change to the repository directory and run `conda env create`. This should use the specification file to create a conda environment called `spfreq_sim`. You can activate it using `conda activate sqfreq_sim`.
+The dependencies are easiest to handle using the [Anaconda distribution](https://www.anaconda.com/products/distribution), so you should first install that. An Anaconda environment specification file `environment.yml` is included with the repository.  Once you have Anaconda working, clone the repository, change to the newly created repository directory and run `conda env create`. This should use the specification file to create a conda environment called `spfreq_sim`. You can activate it using `conda activate sqfreq_sim`.
 
 ## Configuration
 
