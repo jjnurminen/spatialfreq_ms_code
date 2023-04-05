@@ -1,15 +1,22 @@
 
 ## Introduction
 
-This repository contains simulation code from the paper Nurminen et al (2023). The code is written in Python.
+This repository contains simulation code from the paper Nurminen et al (2023). The code is written in Python. It heavily depends on the mne-python library.
+
+## Installation
+
+The dependencies are easiest to handle using Anaconda (or Miniconda). An Anaconda environment specification file `environment.yml` is included with the repository. Once you have Anaconda working, clone the repository, change to the repository directory and run `conda env create`. This should use the specification file to create a conda environment called `spfreq`. Activate it using `conda activate sqfreq`.
+
+## Configuration
+
+Edit `paths.py` in the repository root. Change `DATA_PATH` to point to the directory where you cloned the repository. This is needed so that the code can find the necessary data files. Any generated figures will also be placed under the same directory.
 
 ## Running the code
 
-- Create and activate a suitable Python environment
-    - Easiest way is to download `environment.yml` from the package root and run `conda env create`
-    - Activate the newly created environment by `conda activate spfreq`
-- Clone repository and cd into the directory
-- You should now be able to run the code. The simulation code resides in `main.py`.
+
+
+
+
 
 ## Generating figures
 
