@@ -5,7 +5,7 @@ This repository contains simulation code from the paper Nurminen et al (2023). T
 
 ## Installation
 
-The dependencies are easiest to handle using the Anaconda distribution, so you should first install that. An Anaconda environment specification file `environment.yml` is included with the repository. Once you have Anaconda working, clone the repository, change to the repository directory and run `conda env create`. This should use the specification file to create a conda environment called `spfreq`. Activate it using `conda activate sqfreq`.
+The dependencies are easiest to handle using the Anaconda distribution, so you should first install that. An Anaconda environment specification file `environment.yml` is included with the repository. Once you have Anaconda working, clone the repository, change to the repository directory and run `conda env create`. This should use the specification file to create a conda environment called `spfreq_sim`. You can activate it using `conda activate sqfreq_sim`.
 
 ## Configuration
 
@@ -15,7 +15,7 @@ Several of the figures require the ImageMagick package, specifically the `montag
 
 ## Running the code
 
- Before attempting to run the code, make sure to activate the right Anaconda environment, as described above.
+Before attempting to run the code, make sure to activate the right Anaconda environment first. Precisely how to do this depends on your IDE. If you run the code from a Python console, you can use the `conda activate` command as above.
 
 The main simulation code is contained in `main.py`. The code is organized in code cells. Many IDEs such as Spyder and Visual Studio Code support running individual cells. You can run individual cells (in top to bottom order, as they depend on each other). Alternatively, you can run the entire `main.py` in a Python console, in which case it will attempt to generate all the manuscript figures.
 
