@@ -9,7 +9,7 @@ from pathlib import Path
 import platform
 
 # the path where the necessary data files reside
-DATA_PATH = Path.home() / 'projects/spatialfreq_ms_code'
+DATA_PATH = Path.home() / 'repos/spatialfreq_ms_code'
 
 # path to the montage binary
 if platform.system() == 'Linux':
