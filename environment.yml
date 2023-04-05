@@ -1,4 +1,4 @@
-name: spfreq
+name: spfreq_sim
 channels:
 - conda-forge
 dependencies:
