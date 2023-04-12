@@ -6,7 +6,7 @@ It heavily depends on the [mne-python](https://mne.tools/stable/index.html) libr
 
 ## Installation
 
-The dependencies are easiest to handle using the [Anaconda distribution](https://www.anaconda.com/products/distribution), so you should first install that. An Anaconda environment specification file `environment.yml` is included with the repository.  Once you have Anaconda working, clone the repository, change to the newly created repository directory and run `conda env create`. This should use the specification file to create a conda environment called `spfreq_sim`. You can activate it using `conda activate sqfreq_sim`.
+The dependencies are easiest to handle using the [Anaconda distribution](https://www.anaconda.com/products/distribution). An Anaconda environment specification file `environment.yml` is included in the repository root.  Once you have Anaconda working, clone the repository and run `conda env create` in the repository directory. This should create a conda environment called `spfreq_sim`. You can activate it using `conda activate sqfreq_sim`.
 
 ## Configuration
 
@@ -16,7 +16,7 @@ Several of the figures require the ImageMagick package, specifically the `montag
 
 ## Running the code
 
-The main simulation code is contained in `main.py`. The code is organized in code cells. Many IDEs such as Spyder and Visual Studio Code support running individual cells. You can run individual cells (in top to bottom order, as they depend on each other). Alternatively, you can run the entire `main.py` in a Python console, in which case it will attempt to generate all the manuscript figures.
+The main simulation code is contained in `main.py`. The code is organized in Jupyter-style cells. Most IDEs, such as Spyder and Visual Studio Code, support  code cells. You can run individual cells (in top to bottom order, as they depend on each other). Alternatively, you can run the entire `main.py` in a Python console, in which case it will attempt to generate all the manuscript figures.
 
 Before attempting to run the code, make sure to activate the right Anaconda environment first. Precisely how to do this depends on your IDE. If you run the code from a Python console, you can use the `conda activate` command as above.
 
