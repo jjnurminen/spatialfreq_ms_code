@@ -319,7 +319,7 @@ node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1
 
 # %% COMPUTE resolution kernel and spatial dispersion.
 #
-sds = dict()
+sds_multipole = dict()
 xin_res_kernels = dict()
 #
 # FIT_REDUCED_BASES=False: decompose the sensor-based leadfield into the full
@@ -333,7 +333,7 @@ xin_res_kernels = dict()
 FIT_REDUCED_BASES = True
 RES_METHOD = 'tikhonov'  # how to regularize when computing the resolution kernels
 RES_RCOND = 1e-15  # rcond if regularizing with pinv
-RES_TIKHONOV_LAMBDA = 1e-8  # Tikhonov lambda, if regularizing with Tikhonov
+RES_TIKHONOV_LAMBDA = 1e-11  # Tikhonov lambda, if regularizing with Tikhonov
 xin_lead_conds = list()
 xin_leads = list()
 print('computing multipole-based resolution kernels...')
@@ -356,7 +356,7 @@ for L in range(1, LIN + 1):
         rcond=RES_RCOND,
     )
     xin_res_kernels[L] = res_kernel
-    sds[L] = _spatial_dispersion(res_kernel, src_dij_all)
+    sds_multipole[L] = _spatial_dispersion(res_kernel, src_dij_all)
 
 # compute resolution kernel and spatial dispersion for sensor-based leadfield
 print('computing sensor-based resolution kernel...')
@@ -367,8 +367,10 @@ res_kernel = _resolution_kernel(
     rcond=RES_RCOND,
 )
 sds_sensor = _spatial_dispersion(res_kernel, src_dij_all)
+print('done')
 
-# compute resolution kernel and spatial dispersion for sensor-based leadfield as
+
+# %% COMPUTE resolution kernel and spatial dispersion for sensor-based leadfield as
 # a function of Tikhonov lambda
 print('computing sensor-based resolution kernels with varying regularization...')
 sds_lambda = dict()
@@ -378,6 +380,7 @@ for _lambda in lambdas:
         leads_all_sc, method='tikhonov', tikhonov_lambda=_lambda
     )
     sds_lambda[_lambda] = _spatial_dispersion(res_kernel, src_dij_all)
+print('done')
 
 
 # %% FIGURE 4: Plot spatial dispersion vs lambda and L.
@@ -400,7 +403,7 @@ ax1.invert_xaxis()
 ax2.set_xticks(Lvals)
 ax2.set_xlabel('$L$ (multipole-based inverse)')
 ax2.plot(
-    Lvals, [1e3 * REDUCER_FUN(sds[L][:]) for L in Lvals], 'r', label='multipole-based'
+    Lvals, [1e3 * REDUCER_FUN(sds_multipole[L][:]) for L in Lvals], 'r', label='multipole-based'
 )
 ax2.set_yticks(YTICKS)
 plt.tight_layout()
@@ -415,13 +418,13 @@ MAX_LIN = 13
 SURF = 'inflated'
 outfn = FIG_DIR / f'dispersion_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}.png'
 # restrict dispersion to current hemi
-sds_thishemi = [sd[HEMI_SLICE] for sd in sds.values()]
+sds_thishemi = [sd[HEMI_SLICE] for sd in sds_multipole.values()]
 titles = list()
 src_datas = list()
 
 # multipole-based data
 for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
-    src_data = sds[L][HEMI_SLICE]
+    src_data = sds_multipole[L][HEMI_SLICE]
     # scalarize and convert m->mm
     src_data = 1e3 * _scalarize_src_data(src_data, nverts_thishemi, reducer_fun=np.mean)
     src_datas.append(src_data)
@@ -483,7 +486,7 @@ for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
     src_data = np.abs(xin_res_kernels[L][SRC_IND, HEMI_SLICE])
     src_data = _scalarize_src_data(src_data, nverts_thishemi)
     src_datas.append(src_data)
-    sd = sds[L][SRC_IND] * 1e3
+    sd = sds_multipole[L][SRC_IND] * 1e3
     title = f'L=1..{L}, SD={sd:.0f} mm'
     titles.append(title)
 
@@ -543,7 +546,7 @@ for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
     src_data = np.abs(xin_res_kernels[L][SRC_IND, HEMI_SLICE])
     src_data = _scalarize_src_data(src_data, nverts_thishemi)
     src_datas.append(src_data)
-    sd = sds[L][SRC_IND] * 1e3
+    sd = sds_multipole[L][SRC_IND] * 1e3
     title = f'L=1..{L}, SD={sd:.0f} mm'
     titles.append(title)
 
