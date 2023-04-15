@@ -215,7 +215,7 @@ src_normals = dict()  # (N_nodes, 3) for fixed orientations, or (3*N_nodes, 3) f
 src_node_inds = dict()  # (N_nodes, 1) indices into full discretized cortex volume
 nsrc_valid = dict()
 nverts = dict()
-# for these guys, shapes are (N_nodes, 3)/(3*N_nodes, 3) for fixed/free
+# for these, shapes are (N_nodes, 3)/(3*N_nodes, 3) for fixed/free
 leads = _split_leadfield(fwd_cort)
 src_normals = _split_normals(fwd_cort)
 
@@ -318,73 +318,76 @@ node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1
 
 
 # %% COMPUTE resolution kernel and spatial dispersion.
-#
-sds_multipole = dict()
-xin_res_kernels = dict()
-#
-# FIT_REDUCED_BASES=False: decompose the sensor-based leadfield into the full
-# range of available L components first, then pick the components for each L in
-# turn. In principle, this has the advantage of avoiding aliasing, since the
-# initial fit includes all spatial freqs. If L is very high, the initial
-# decomposition may require regularization.
-#
-# FIT_REDUCED_BASES=True: fit leadfield onto the reduced-order basis at each L.
-#
-FIT_REDUCED_BASES = True
-RES_METHOD = 'tikhonov'  # how to regularize when computing the resolution kernels
-RES_RCOND = 1e-15  # rcond if regularizing with pinv
-RES_TIKHONOV_LAMBDA = 1e-11  # Tikhonov lambda, if regularizing with Tikhonov
-xin_lead_conds = list()
-xin_leads = list()
-print('computing multipole-based resolution kernels...')
-for L in range(1, LIN + 1):
-    theLs = list(range(1, L + 1))
-    # the component indices to include
-    include = np.where(np.isin(basisvec_L, theLs))[0]
-    if FIT_REDUCED_BASES:
-        Sin_red = Sin[:, include]
-        xin_leads_filt = np.squeeze(np.linalg.pinv(Sin_red) @ leads_all_sc)
-    else:
-        xin_leads_filt = xin_leads_all[include]
-    xin_leads.append(xin_leads_filt)
-    xin_lead_conds.append(np.linalg.cond(xin_leads_filt))
-    print(f'{L=}, leadfield condition: {np.linalg.cond(xin_leads_filt):g}')
-    res_kernel = _resolution_kernel(
-        xin_leads_filt,
+
+
+def _compute_sds(tikhonov_lambda):
+    sds_multipole = dict()
+    xin_res_kernels = dict()
+    #
+    # FIT_REDUCED_BASES=False: decompose the sensor-based leadfield into the full
+    # range of available L components first, then pick the components for each L in
+    # turn. In principle, this has the advantage of avoiding aliasing, since the
+    # initial fit includes all spatial freqs. If L is very high, the initial
+    # decomposition may require regularization.
+    #
+    # FIT_REDUCED_BASES=True: fit leadfield onto the reduced-order basis at each L.
+    #
+    FIT_REDUCED_BASES = True
+    RES_METHOD = 'tikhonov'  # how to regularize when computing the resolution kernels
+    xin_lead_conds = list()
+    xin_leads = list()
+    print('computing multipole-based resolution kernels...')
+    for L in range(1, LIN + 1):
+        theLs = list(range(1, L + 1))
+        # the component indices to include
+        include = np.where(np.isin(basisvec_L, theLs))[0]
+        if FIT_REDUCED_BASES:
+            Sin_red = Sin[:, include]
+            xin_leads_filt = np.squeeze(np.linalg.pinv(Sin_red) @ leads_all_sc)
+        else:
+            xin_leads_filt = xin_leads_all[include]
+        xin_leads.append(xin_leads_filt)
+        xin_lead_conds.append(np.linalg.cond(xin_leads_filt))
+        print(f'{L=}, leadfield condition: {np.linalg.cond(xin_leads_filt):g}')
+        res_kernel = _resolution_kernel(
+            xin_leads_filt,
+            method=RES_METHOD,
+            tikhonov_lambda=tikhonov_lambda,
+        )
+        xin_res_kernels[L] = res_kernel
+        sds_multipole[L] = _spatial_dispersion(res_kernel, src_dij_all)
+
+    # compute resolution kernel and spatial dispersion for sensor-based leadfield
+    print('computing sensor-based resolution kernel...')
+    sensor_res_kernel = _resolution_kernel(
+        leads_all_sc,
         method=RES_METHOD,
-        tikhonov_lambda=RES_TIKHONOV_LAMBDA,
-        rcond=RES_RCOND,
+        tikhonov_lambda=tikhonov_lambda,
     )
-    xin_res_kernels[L] = res_kernel
-    sds_multipole[L] = _spatial_dispersion(res_kernel, src_dij_all)
+    sds_sensor = _spatial_dispersion(sensor_res_kernel, src_dij_all)
+    print('done')
+    return {'sds_multipole': sds_multipole, 'sds_sensor': sds_sensor,
+            'xin_res_kernels': xin_res_kernels, 'sensor_res_kernel': sensor_res_kernel}
 
-# compute resolution kernel and spatial dispersion for sensor-based leadfield
-print('computing sensor-based resolution kernel...')
-res_kernel = _resolution_kernel(
-    leads_all_sc,
-    method=RES_METHOD,
-    tikhonov_lambda=RES_TIKHONOV_LAMBDA,
-    rcond=RES_RCOND,
-)
-sds_sensor = _spatial_dispersion(res_kernel, src_dij_all)
-print('done')
+def _compute_sds_vs_lambda():
+    # compute resolution kernel and spatial dispersion for sensor-based leadfield as
+    # a function of Tikhonov lambda
+    print('computing sensor-based resolution kernels with varying regularization...')
+    sds_lambda = dict()
+    lambdas = 10.0 ** np.arange(-5, -12, -1)
+    for _lambda in lambdas:
+        res_kernel = _resolution_kernel(
+            leads_all_sc, method='tikhonov', tikhonov_lambda=_lambda
+        )
+        sds_lambda[_lambda] = _spatial_dispersion(res_kernel, src_dij_all)
+    print('done')
+    return sds_lambda
 
-
-# %% COMPUTE resolution kernel and spatial dispersion for sensor-based leadfield as
-# a function of Tikhonov lambda
-print('computing sensor-based resolution kernels with varying regularization...')
-sds_lambda = dict()
-lambdas = 10.0 ** np.arange(-5, -12, -1)
-for _lambda in lambdas:
-    res_kernel = _resolution_kernel(
-        leads_all_sc, method='tikhonov', tikhonov_lambda=_lambda
-    )
-    sds_lambda[_lambda] = _spatial_dispersion(res_kernel, src_dij_all)
-print('done')
 
 
 # %% FIGURE 4: Plot spatial dispersion vs lambda and L.
-
+sds_multipole = _compute_sds(0)['sds_multipole']
+sds_lambda = _compute_sds_vs_lambda()
 outfn = FIG_DIR / 'mean_PSF_SD_vs_L_and_lambda.png'
 Lvals = list(range(1, LIN + 1))
 REDUCER_FUN = np.mean
@@ -412,6 +415,12 @@ plt.savefig(outfn)
 
 # %% FIGURE 2: plot PSF spatial dispersion as function of Lin.
 #
+sds_data = _compute_sds(1e-11)   # XXX: rename?
+xin_res_kernels = sds_data['xin_res_kernels']
+sensor_res_kernel = sds_data['sensor_res_kernel']
+sds_sensor = sds_data['sds_sensor']
+sds_multipole = sds_data['sds_multipole']
+
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13
@@ -459,6 +468,12 @@ _montage_pysurfer_brain_plots(
 
 # %% FIGURE 1: plot single source PSF as function of Lin, no regularization.
 #
+sds_data = _compute_sds(1e-11)   # XXX: rename?
+xin_res_kernels = sds_data['xin_res_kernels']
+sensor_res_kernel = sds_data['sensor_res_kernel']
+sds_sensor = sds_data['sds_sensor']
+sds_multipole = sds_data['sds_multipole']
+
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
 MAX_LIN = 13  # max LIN value to use
@@ -491,7 +506,7 @@ for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
     titles.append(title)
 
 # sensor-based data
-src_data = np.abs(res_kernel[SRC_IND, HEMI_SLICE])
+src_data = np.abs(sensor_res_kernel[SRC_IND, HEMI_SLICE])
 sd = sds_sensor[SRC_IND] * 1e3
 title = f'sensor, SD={sd:.0f} mm'
 src_datas.append(src_data)
@@ -518,7 +533,12 @@ _montage_pysurfer_brain_plots(
 
 
 # %% FIGURE 3: plot single source PSF as function of Lin, regularization with lambda = 1e-8
-# XXX: check that sensor-based result is correct!
+sds_data = _compute_sds(1e-8)   # XXX: rename?
+xin_res_kernels = sds_data['xin_res_kernels']
+sensor_res_kernel = sds_data['sensor_res_kernel']
+sds_sensor = sds_data['sds_sensor']
+sds_multipole = sds_data['sds_multipole']
+
 #
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
@@ -619,7 +639,6 @@ _montage_mlab_trimesh(locs, tri, src_datas, titles, outfn, ncols_max=5, distance
 outfn = FIG_DIR / 'inverse_vs_SNR.png'
 
 REGU_METHOD = 'tikhonov'
-# in literature, values of ~1e-5 to ~1e-11 have been considered; 1e-8 is reasonable
 LAMBDA = 0
 PINV_RCOND = 1e-20
 FIG_BG_COLOR = (0.3, 0.3, 0.3)
