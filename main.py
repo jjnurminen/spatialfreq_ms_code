@@ -320,7 +320,7 @@ node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1
 # %% COMPUTE resolution kernel and spatial dispersion.
 
 
-def _compute_sds(tikhonov_lambda):
+def _compute_res_kernels(tikhonov_lambda):
     sds_multipole = dict()
     xin_res_kernels = dict()
     #
@@ -369,7 +369,7 @@ def _compute_sds(tikhonov_lambda):
     return {'sds_multipole': sds_multipole, 'sds_sensor': sds_sensor,
             'xin_res_kernels': xin_res_kernels, 'sensor_res_kernel': sensor_res_kernel}
 
-def _compute_sds_vs_lambda(lambdas):
+def _compute_res_kernels_vs_lambda(lambdas):
     # compute resolution kernel and spatial dispersion for sensor-based leadfield as
     # a function of Tikhonov lambda
     print('computing sensor-based resolution kernels with varying regularization...')
@@ -385,9 +385,9 @@ def _compute_sds_vs_lambda(lambdas):
 
 
 # %% FIGURE 4: Plot spatial dispersion vs lambda and L.
-sds_multipole = _compute_sds(0)['sds_multipole']
+sds_multipole = _compute_res_kernels(lambda=0)['sds_multipole']
 lambdas = 10.0 ** np.arange(-5, -12, -1)
-sds_lambda = _compute_sds_vs_lambda(lambdas)
+sds_lambda = _compute_res_kernels_vs_lambda(lambdas)
 
 outfn = FIG_DIR / 'mean_PSF_SD_vs_L_and_lambda.png'
 Lvals = list(range(1, LIN + 1))
@@ -416,9 +416,9 @@ plt.savefig(outfn)
 
 # %% FIGURE 2: plot PSF spatial dispersion as function of Lin.
 #
-sds_data = _compute_sds(1e-11)   # XXX: rename?
-sds_sensor = sds_data['sds_sensor']
-sds_multipole = sds_data['sds_multipole']
+kernels_data = _compute_res_kernels(lambda=1e-11)
+sds_sensor = kernels_data['sds_sensor']
+sds_multipole = kernels_data['sds_multipole']
 
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
@@ -467,11 +467,11 @@ _montage_pysurfer_brain_plots(
 
 # %% FIGURE 1: plot single source PSF as function of Lin, no regularization.
 #
-sds_data = _compute_sds(1e-11)
-xin_res_kernels = sds_data['xin_res_kernels']
-sensor_res_kernel = sds_data['sensor_res_kernel']
-sds_sensor = sds_data['sds_sensor']
-sds_multipole = sds_data['sds_multipole']
+kernels_data = _compute_res_kernels(lambda=1e-11)
+xin_res_kernels = kernels_data['xin_res_kernels']
+sensor_res_kernel = kernels_data['sensor_res_kernel']
+sds_sensor = kernels_data['sds_sensor']
+sds_multipole = kernels_data['sds_multipole']
 
 N_SKIP = 2  # reduce n of plots by stepping the index
 MIN_LIN = 1
@@ -532,11 +532,11 @@ _montage_pysurfer_brain_plots(
 
 
 # %% FIGURE 3: plot single source PSF as function of Lin, regularization with lambda = 1e-8
-sds_data = _compute_sds(1e-8)   # XXX: rename?
-xin_res_kernels = sds_data['xin_res_kernels']
-sensor_res_kernel = sds_data['sensor_res_kernel']
-sds_sensor = sds_data['sds_sensor']
-sds_multipole = sds_data['sds_multipole']
+kernels_data = _compute_res_kernels(lambda=1e-8)   # XXX: rename?
+xin_res_kernels = kernels_data['xin_res_kernels']
+sensor_res_kernel = kernels_data['sensor_res_kernel']
+sds_sensor = kernels_data['sds_sensor']
+sds_multipole = kernels_data['sds_multipole']
 
 #
 N_SKIP = 2  # reduce n of plots by stepping the index
