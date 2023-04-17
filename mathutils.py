@@ -30,6 +30,7 @@ def _vector_angles(V, W):
     dots = np.clip(dots, -1, 1)
     return np.arccos(dots) / np.pi * 180
 
+
 def subspace_angles_deg(A, B):
     """Return subspace angles in degrees"""
     return subspace_angles(A, B) / np.pi * 180
@@ -121,6 +122,7 @@ def _spherepts_golden(N, angle=4 * np.pi):
     r = np.sqrt(1 - z**2)
     # this looks like the usual cylindrical -> Cartesian transform?
     return np.column_stack((r * np.cos(longs), r * np.sin(longs), z))
+
 
 def _moore_penrose_pseudoinverse(L):
     """Naive Moore-Penrose pseudoinverse (without regularization)"""

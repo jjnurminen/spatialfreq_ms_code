@@ -320,6 +320,7 @@ node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1
 # %% COMPUTE resolution kernel and spatial dispersion
 # this defines function to compute the resolution kernel, actual computation is done later
 
+
 def _compute_res_kernels(tikhonov_lambda):
     sds_multipole = dict()
     xin_res_kernels = dict()
@@ -366,8 +367,13 @@ def _compute_res_kernels(tikhonov_lambda):
     )
     sds_sensor = _spatial_dispersion(sensor_res_kernel, src_dij_all)
     print('done')
-    return {'sds_multipole': sds_multipole, 'sds_sensor': sds_sensor,
-            'xin_res_kernels': xin_res_kernels, 'sensor_res_kernel': sensor_res_kernel}
+    return {
+        'sds_multipole': sds_multipole,
+        'sds_sensor': sds_sensor,
+        'xin_res_kernels': xin_res_kernels,
+        'sensor_res_kernel': sensor_res_kernel,
+    }
+
 
 def _compute_res_kernels_vs_lambda(lambdas):
     # compute resolution kernel and spatial dispersion for sensor-based leadfield as
@@ -381,7 +387,6 @@ def _compute_res_kernels_vs_lambda(lambdas):
         sds_lambda[_lambda] = _spatial_dispersion(res_kernel, src_dij_all)
     print('done')
     return sds_lambda
-
 
 
 # %% FIGURE 4: Plot spatial dispersion vs lambda and L.
@@ -407,7 +412,10 @@ ax1.invert_xaxis()
 ax2.set_xticks(Lvals)
 ax2.set_xlabel('$L$ (multipole-based inverse)')
 ax2.plot(
-    Lvals, [1e3 * REDUCER_FUN(sds_multipole[L][:]) for L in Lvals], 'r', label='multipole-based'
+    Lvals,
+    [1e3 * REDUCER_FUN(sds_multipole[L][:]) for L in Lvals],
+    'r',
+    label='multipole-based',
 )
 ax2.set_yticks(YTICKS)
 plt.tight_layout()
