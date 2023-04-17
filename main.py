@@ -259,7 +259,7 @@ else:
     src_dij_thishemi = scipy.spatial.distance_matrix(
         node_coords_thishemi_redundant, node_coords_thishemi_redundant
     )
-    # XXX: src_dij_all is not yet computed for free ori
+    # NB: src_dij_all is not yet computed for free orientations
 
 
 # %% COMPUTE multipole basis, multipole-based leadfields etc.
@@ -317,8 +317,8 @@ node_coords_thishemi_dev = apply_trans(head_dev_trans, node_coords_thishemi)
 node_origin_dists = np.linalg.norm(node_coords_thishemi_dev - sss_origin, axis=1)
 
 
-# %% COMPUTE resolution kernel and spatial dispersion.
-
+# %% COMPUTE resolution kernel and spatial dispersion
+# this defines function to compute the resolution kernel, actual computation is done later
 
 def _compute_res_kernels(tikhonov_lambda):
     sds_multipole = dict()
@@ -385,7 +385,7 @@ def _compute_res_kernels_vs_lambda(lambdas):
 
 
 # %% FIGURE 4: Plot spatial dispersion vs lambda and L.
-sds_multipole = _compute_res_kernels(lambda=0)['sds_multipole']
+sds_multipole = _compute_res_kernels(tikhonov_lambda=0)['sds_multipole']
 lambdas = 10.0 ** np.arange(-5, -12, -1)
 sds_lambda = _compute_res_kernels_vs_lambda(lambdas)
 
@@ -416,7 +416,7 @@ plt.savefig(outfn)
 
 # %% FIGURE 2: plot PSF spatial dispersion as function of Lin.
 #
-kernels_data = _compute_res_kernels(lambda=1e-11)
+kernels_data = _compute_res_kernels(tikhonov_lambda=1e-11)
 sds_sensor = kernels_data['sds_sensor']
 sds_multipole = kernels_data['sds_multipole']
 
@@ -467,7 +467,7 @@ _montage_pysurfer_brain_plots(
 
 # %% FIGURE 1: plot single source PSF as function of Lin, no regularization.
 #
-kernels_data = _compute_res_kernels(lambda=1e-11)
+kernels_data = _compute_res_kernels(tikhonov_lambda=1e-11)
 xin_res_kernels = kernels_data['xin_res_kernels']
 sensor_res_kernel = kernels_data['sensor_res_kernel']
 sds_sensor = kernels_data['sds_sensor']
@@ -532,7 +532,7 @@ _montage_pysurfer_brain_plots(
 
 
 # %% FIGURE 3: plot single source PSF as function of Lin, regularization with lambda = 1e-8
-kernels_data = _compute_res_kernels(lambda=1e-8)   # XXX: rename?
+kernels_data = _compute_res_kernels(tikhonov_lambda=1e-8)
 xin_res_kernels = kernels_data['xin_res_kernels']
 sensor_res_kernel = kernels_data['sensor_res_kernel']
 sds_sensor = kernels_data['sds_sensor']
