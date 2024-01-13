@@ -85,7 +85,11 @@ HEAD_ORIGIN = np.array((0.0, 0.0, 0.04))
 HEMI = 'lh'
 SURF = 'white'
 # index of a representative source (tangential on left hemi); this depends on source space
-REPR_SOURCE = 1251
+#REPR_SOURCE = 602 # top of the head
+#REPR_SOURCE = 2 # occipital
+#REPR_SOURCE = 1251 # superficial temporal source; included in MS
+#REPR_SOURCE = 980  # another superficial temporal source
+REPR_SOURCE = 1594  # deeper temporal source, included in MS
 
 # use 'sample' subject for coreg + mri
 data_path = Path(mne.datasets.sample.data_path())  # path to fiff data

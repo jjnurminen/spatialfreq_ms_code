@@ -204,6 +204,8 @@ def _montage_pysurfer_brain_plots(
                 fmin=fmin, fmid=fmid, fmax=fmax, transparent=False, verbose=False
             )
         mlab.text(0.1, 0.8, title, width=title_width)
+        # view for an occipital source
+        #mlab.view(-119.5036519701047, 90.65370784316794, 527.0917968750098, [0., 0., 0.])      
 
         # temporarily save fig for the montage
         fname = _named_tempfile(suffix='.png')
