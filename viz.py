@@ -152,7 +152,7 @@ def _montage_pysurfer_brain_plots(
     if title_width is None:
         title_width = 0.5
 
-    colorbar_fontsize = int(FIGSIZE[0] / 16)  # heuristic
+    colorbar_fontsize = int(FIGSIZE[0] / 24)  # heuristic
 
     nfigs = len(src_datas)
 
@@ -255,7 +255,9 @@ def _montage_mlab_trimesh(
         _mlab_trimesh(locs, tri, scalars=src_data, figure=fig)
         mlab.view(distance=distance)
         # mlab.title(title, color=(0., 0., 0.))
-        mlab.text(0, 0.8, title, width=0.2, color=(0.0, 0.0, 0.0))
+        # HACK: adapt text width to title length
+        text_width = 0.04 * len(title)
+        mlab.text(0, 0.8, title, width=text_width, color=(0.0, 0.0, 0.0))
         # save fig for the montage
         fname = _named_tempfile(suffix='.png')
         print(f'creating figure {idx}/{nfigs}')

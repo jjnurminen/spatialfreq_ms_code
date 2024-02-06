@@ -87,9 +87,9 @@ SURF = 'white'
 # index of a representative source (tangential on left hemi); this depends on source space
 #REPR_SOURCE = 602 # top of the head
 #REPR_SOURCE = 2 # occipital
-#REPR_SOURCE = 1251 # superficial temporal source; included in MS
+REPR_SOURCE_SUPERF = 1251 # superficial temporal source; included in MS
 #REPR_SOURCE = 980  # another superficial temporal source
-REPR_SOURCE = 1594  # deeper temporal source, included in MS
+REPR_SOURCE_DEEP = 1594  # deeper temporal source, included in MS
 
 # use 'sample' subject for coreg + mri
 data_path = Path(mne.datasets.sample.data_path())  # path to fiff data
@@ -393,6 +393,11 @@ def _compute_res_kernels_vs_lambda(lambdas):
     return sds_lambda
 
 
+# %% Some plotting common parameters
+MONTAGE_TITLE_WIDTH = 0.7  # rel. width of subtitles in montaged figs
+NCOLS_MAX = 2  # max n. of columns in (most) montaged figs 
+
+
 # %% FIGURE 4: Plot spatial dispersion vs lambda and L.
 sds_multipole = _compute_res_kernels(tikhonov_lambda=0)['sds_multipole']
 lambdas = 10.0 ** np.arange(-5, -12, -1)
@@ -470,14 +475,16 @@ _montage_pysurfer_brain_plots(
     outfn,
     surf=SURF,
     frange=(fmin, fmax),
-    ncols_max=4,
+    ncols_max=NCOLS_MAX,
     colormap='plasma_r',
     colorbar_nlabels=4,
     title_width=0.3,
 )
 
 
-# %% FIGURE 1: plot single source PSF as function of Lin, no regularization.
+
+# %% FIGURE 1a: plot single source PSF as function of Lin, no regularization.
+# Superficial source.
 #
 kernels_data = _compute_res_kernels(tikhonov_lambda=1e-11)
 xin_res_kernels = kernels_data['xin_res_kernels']
@@ -491,13 +498,12 @@ MAX_LIN = 13  # max LIN value to use
 COLOR_THRES = None  # don't show colors below given value
 SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
 # NOTE: source indices are global (index the complete leadfield, not a hemi)
-SRC_IND = REPR_SOURCE
+SRC_IND = REPR_SOURCE_SUPERF
 SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
 # frange = 0, .05  # global fixed
 frange = 'separate'  # individual auto
 if not FIX_ORI:
     SRC_IND = SRC_IND[1]  # pick a single orientation
-NCOLS_MAX = 4
 outfn = (
     FIG_DIR
     / f'psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
@@ -538,9 +544,62 @@ _montage_pysurfer_brain_plots(
     ncols_max=NCOLS_MAX,
     colormap='plasma',
     colorbar_nlabels=4,
-    title_width=0.7,
+    title_width=MONTAGE_TITLE_WIDTH,
     do_colorbar=False,
 )
+
+# FIGURE 1b: same for above, but for deep source
+SRC_IND = REPR_SOURCE_DEEP
+SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
+# frange = 0, .05  # global fixed
+frange = 'separate'  # individual auto
+if not FIX_ORI:
+    SRC_IND = SRC_IND[1]  # pick a single orientation
+
+outfn = (
+    FIG_DIR
+    / f'deepsource_psf_cortexplot_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
+)
+
+titles = list()
+src_datas = list()
+
+# multipole-based data
+for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
+    # for each L, slice correct row from resolution matrix, restrict to current hemi
+    src_data = np.abs(xin_res_kernels[L][SRC_IND, HEMI_SLICE])
+    src_data = _scalarize_src_data(src_data, nverts_thishemi)
+    src_datas.append(src_data)
+    sd = sds_multipole[L][SRC_IND] * 1e3
+    title = f'L=1..{L}, SD={sd:.0f} mm'
+    titles.append(title)
+
+# sensor-based data
+src_data = np.abs(sensor_res_kernel[SRC_IND, HEMI_SLICE])
+sd = sds_sensor[SRC_IND] * 1e3
+title = f'sensor, SD={sd:.0f} mm'
+src_datas.append(src_data)
+titles.append(title)
+
+_montage_pysurfer_brain_plots(
+    subject,
+    subjects_dir,
+    src_datas,
+    titles,
+    src_node_inds[HEMI_IND],
+    HEMI,
+    outfn,
+    thresh=COLOR_THRES,
+    smoothing_steps=None,
+    surf=SURF,
+    frange=frange,
+    ncols_max=NCOLS_MAX,
+    colormap='plasma',
+    colorbar_nlabels=4,
+    title_width=MONTAGE_TITLE_WIDTH,
+    do_colorbar=False,
+)
+
 
 
 # %% FIGURE 3: plot single source PSF as function of Lin, regularization with lambda = 1e-8
@@ -557,12 +616,11 @@ MAX_LIN = 13  # max LIN value to use
 COLOR_THRES = None  # don't show colors below given value
 SURF = 'inflated'  # which surface; usually either 'white' or 'inflated'
 # NOTE: source indices are global (index the complete leadfield, not a hemi)
-SRC_IND = REPR_SOURCE
+SRC_IND = REPR_SOURCE_SUPERF
 SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
 frange = 'separate'  # individual auto
 if not FIX_ORI:
     SRC_IND = SRC_IND[1]  # pick a single orientation
-NCOLS_MAX = 4
 outfn = (
     FIG_DIR
     / f'psf_cortexplot_regu_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
@@ -603,9 +661,61 @@ _montage_pysurfer_brain_plots(
     ncols_max=NCOLS_MAX,
     colormap='plasma',
     colorbar_nlabels=4,
-    title_width=0.7,
+    title_width=MONTAGE_TITLE_WIDTH,
     do_colorbar=False,
 )
+
+SRC_IND = REPR_SOURCE_DEEP
+SRC_IND = _node_to_source_index(SRC_IND, FIX_ORI)
+frange = 'separate'  # individual auto
+if not FIX_ORI:
+    SRC_IND = SRC_IND[1]  # pick a single orientation
+
+outfn = (
+    FIG_DIR
+    / f'deepsource_psf_cortexplot_regu_{FIX_ORI_DESCRIPTION}_{array_name}_LIN{MAX_LIN}_surf_{SURF}.png'
+)
+
+titles = list()
+src_datas = list()
+
+# multipole-based data
+for L in range(MIN_LIN, MAX_LIN + 1, N_SKIP):
+    # for each L, slice correct row from resolution matrix, restrict to current hemi
+    src_data = np.abs(xin_res_kernels[L][SRC_IND, HEMI_SLICE])
+    src_data = _scalarize_src_data(src_data, nverts_thishemi)
+    src_datas.append(src_data)
+    sd = sds_multipole[L][SRC_IND] * 1e3
+    title = f'L=1..{L}, SD={sd:.0f} mm'
+    titles.append(title)
+
+# sensor-based data
+src_data = np.abs(sensor_res_kernel[SRC_IND, HEMI_SLICE])
+sd = sds_sensor[SRC_IND] * 1e3
+title = f'sensor, SD={sd:.0f} mm'
+src_datas.append(src_data)
+titles.append(title)
+
+_montage_pysurfer_brain_plots(
+    subject,
+    subjects_dir,
+    src_datas,
+    titles,
+    src_node_inds[HEMI_IND],
+    HEMI,
+    outfn,
+    thresh=COLOR_THRES,
+    smoothing_steps=None,
+    surf=SURF,
+    frange=frange,
+    ncols_max=NCOLS_MAX,
+    colormap='plasma',
+    colorbar_nlabels=4,
+    title_width=MONTAGE_TITLE_WIDTH,
+    do_colorbar=False,
+)
+
+
 
 
 # %% FIGURE 5: plot lead field SVD vectors on array trimesh.
@@ -622,7 +732,7 @@ for k in range(20):
     src_datas.append(U[:, k])
     title = f'k={k+1}'.ljust(6)
     titles.append(title)
-_montage_mlab_trimesh(locs, tri, src_datas, titles, outfn, ncols_max=5, distance=0.5)
+_montage_mlab_trimesh(locs, tri, src_datas, titles, outfn, ncols_max=4, distance=0.5)
 
 
 # %% FIGURE 6:  plot some VSHs on array trimesh.
@@ -639,7 +749,7 @@ for ind in range(20):
     # title = f'{L=}, {m=}'
     title = f'({L}, {m})'
     titles.append(title)
-_montage_mlab_trimesh(locs, tri, src_datas, titles, outfn, ncols_max=5, distance=0.5)
+_montage_mlab_trimesh(locs, tri, src_datas, titles, outfn, ncols_max=4, distance=0.5)
 
 
 # %% FIGURE 7: L-dependent MNP solution with noise.
@@ -658,9 +768,9 @@ FIGSIZE = (400, 300)
 SNR = 2  # desired SNR (defined as ratio of signal vector norms)
 SNR_VALS = [1, 2, 5, 10]
 LIN_VALS = [6, 7, 8, 9]
-NCOLS_MAX = len(LIN_VALS)
+ncols_max_lin = len(LIN_VALS)
 frange = 'separate'  # individual auto
-SRC_IND = REPR_SOURCE
+SRC_IND = REPR_SOURCE_SUPERF
 DO_COLORBAR = False
 
 inverses = list()
@@ -709,7 +819,7 @@ _montage_pysurfer_brain_plots(
     HEMI,
     outfn,
     frange=frange,
-    ncols_max=NCOLS_MAX,
+    ncols_max=ncols_max_lin,
     colormap='plasma',
     colorbar_nlabels=4,
     title_width=0.4,
